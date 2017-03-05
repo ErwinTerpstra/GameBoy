@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Window\window.h" />
+    <ClInclude Include="Window\buffer.h" />
+    <ClInclude Include="Window\bufferallocator.h" />
+    <ClInclude Include="Window\gdibufferallocator.h" />
+    <ClInclude Include="Window\memorybufferallocator.h" />
+    <ClInclude Include="inputmanager.h" />
+    <ClInclude Include="Window\color.h" />
+    <ClInclude Include="Window\util.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="WinBoy.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="WinBoy.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Window\buffer.cpp" />
+    <ClCompile Include="Window\bufferallocator.cpp" />
+    <ClCompile Include="Window\gdibufferallocator.cpp" />
+    <ClCompile Include="Window\memorybufferallocator.cpp" />
+    <ClCompile Include="Window\window.cpp" />
+    <ClCompile Include="inputmanager.cpp" />
+  </ItemGroup>
+</Project>

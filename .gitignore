@@ -1,0 +1,6 @@
+*.suo
+libdmg/Debug/
+WinBoy/ipch/
+WinBoy/Debug/
+*.opensdf
+*.sdf

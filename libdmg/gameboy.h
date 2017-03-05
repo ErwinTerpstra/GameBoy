@@ -1,0 +1,12 @@
+#ifndef _GAME_BOY_H_
+#define _GAME_BOY_H_
+
+#define GB_MAX_CARTRIDGE_SIZE 8 * 1024 * 1024
+#define GB_SCREEN_WIDTH 160
+#define GB_SCREEN_HEIGHT 144
+#define GB_MAIN_MEM_SIZE 64 * 1024
+
+#define GB_HIMEM_START 0xFF00
+
+
+#endif

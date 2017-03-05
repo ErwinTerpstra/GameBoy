@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="libdmg.h" />
+    <ClInclude Include="cpu.h" />
+    <ClInclude Include="environment.h" />
+    <ClInclude Include="cartridge.h" />
+    <ClInclude Include="emulator.h" />
+    <ClInclude Include="gameboy.h" />
+    <ClInclude Include="memory.h" />
+    <ClInclude Include="debug.h" />
+    <ClInclude Include="util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cpu.cpp" />
+    <ClCompile Include="cartridge.cpp" />
+    <ClCompile Include="emulator.cpp" />
+    <ClCompile Include="memory.cpp" />
+    <ClCompile Include="instructions.cpp" />
+  </ItemGroup>
+</Project>
