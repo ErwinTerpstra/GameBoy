@@ -1,5 +1,7 @@
 #include "cpu.h"
 
+#include "gameboy.h"
+
 #include "memory.h"
 
 #include "debug.h"
@@ -48,24 +50,10 @@ void CPU::ExecuteNextInstruction()
 	(this->*instruction.handler)(opcode, operands);
 }
 
-void CPU::SetFlag(Flags flag, bool state)
-{
-	if (state)
-		registers.f |= flag;
-	else
-		registers.f &= ~flag;
-}
-
-bool CPU::GetFlag(Flags flag)
-{
-	return (registers.f & flag) == flag;
-}
-
 void CPU::WriteStackByte(uint8_t value)
 {
 	memory.WriteByte(registers.sp, value);
 	registers.sp -= 1;
-
 }
 
 void CPU::WriteStackShort(uint16_t value)
@@ -94,6 +82,29 @@ uint8_t CPU::ReadSourceValue(uint8_t opcode)
 void CPU::jump(uint8_t opcode, const uint8_t* operands)
 {
 	registers.pc = DECODE_SHORT(operands);
+}
+
+void CPU::jump_to_offset(uint8_t opcode, const uint8_t* operands)
+{
+	registers.pc += DECODE_SIGNED_BYTE(operands);
+}
+
+void CPU::jump_to_offset_conditional(uint8_t opcode, const uint8_t* operands)
+{
+	bool conditional;
+
+	switch (opcode)
+	{
+		case 0x20: conditional = !GetFlag(FLAG_ZERO); break;
+		case 0x28: conditional = GetFlag(FLAG_ZERO); break;
+		case 0x30: conditional = !GetFlag(FLAG_CARRY); break;
+		case 0x38: conditional = GetFlag(FLAG_CARRY); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+
+	if (conditional)
+		registers.pc += DECODE_SIGNED_BYTE(operands);
 }
 
 void CPU::call(uint8_t opcode, const uint8_t* operands)
@@ -210,7 +221,64 @@ void CPU::alu_xor(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_cmp(uint8_t opcode, const uint8_t* operands)
 {
+	uint8_t value = ReadSourceValue(opcode);
+	int16_t result = registers.a - value;
 
+	SetFlag(FLAG_ZERO, result == 0);
+	SetFlag(FLAG_SUBTRACT, true);
+	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
+	SetFlag(FLAG_CARRY, result < 0);
+}
+
+void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* target = NULL;
+
+	switch (opcode)
+	{
+		case 0x04: target = &registers.b; break;
+		case 0x0C: target = &registers.c; break;
+		case 0x14: target = &registers.d; break;
+		case 0x1C: target = &registers.e; break;
+		case 0x24: target = &registers.h; break;
+		case 0x2C: target = &registers.l; break;
+		case 0x3C: target = &registers.a; break;
+
+		case 0x34: target = memory.RetrievePointer(registers.hl); break;
+	}
+
+	uint8_t value = *target;
+	*target = value + 1;
+
+	SetFlag(FLAG_ZERO, *target == 0);
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
+}
+
+void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* target = NULL;
+
+	switch (opcode)
+	{
+		case 0x05: target = &registers.b; break;
+		case 0x0D: target = &registers.c; break;
+		case 0x15: target = &registers.d; break;
+		case 0x1D: target = &registers.e; break;
+		case 0x25: target = &registers.h; break;
+		case 0x2D: target = &registers.l; break;
+		case 0x3D: target = &registers.a; break;
+
+		case 0x35: target = memory.RetrievePointer(registers.hl); break;
+	}
+
+	uint8_t value = *target;
+
+	*target = value - 1;
+
+	SetFlag(FLAG_ZERO, *target == 0);
+	SetFlag(FLAG_SUBTRACT, true);
+	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
 }
 
 void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
@@ -226,6 +294,8 @@ void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
 		case 0x3E: registers.a = operands[0]; break;
 
 		case 0x36: memory.WriteByte(registers.hl, operands[0]); break;
+
+		default: assert(false && "Invalid opcode for handler!");
 	}
 }
 
@@ -258,6 +328,8 @@ void CPU::load_accumulator_to_memory(uint8_t opcode, const uint8_t* operands)
 		case 0x1: memory.WriteByte(registers.de, registers.a); break;
 		case 0x2: memory.WriteByte(registers.hl, registers.a); ++registers.hl; break;
 		case 0x3: memory.WriteByte(registers.hl, registers.a); --registers.hl; break;
+
+		default: assert(false && "Invalid opcode for handler!");
 	}
 }
 
@@ -269,6 +341,46 @@ void CPU::load_memory_to_accumulator(uint8_t opcode, const uint8_t* operands)
 		case 0x1: memory.Read(registers.de, registers.a); break;
 		case 0x2: memory.Read(registers.hl, registers.a); ++registers.hl; break;
 		case 0x3: memory.Read(registers.hl, registers.a); --registers.hl; break;
+
+		default: assert(false && "Invalid opcode for handler!");
 	}
 
+}
+
+void CPU::load_accumulator_to_io_register(uint8_t opcode, const uint8_t* operands)
+{
+	memory.WriteByte(GB_IO_REGISTERS + operands[0], registers.a);
+}
+
+void CPU::load_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands)
+{
+	registers.a = memory.ReadByte(GB_IO_REGISTERS + operands[0]);
+}
+
+void CPU::load_constant_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	switch (opcode)
+	{
+		case 0x01: registers.bc = DECODE_SHORT(operands); break;
+		case 0x11: registers.de = DECODE_SHORT(operands); break;
+		case 0x21: registers.hl = DECODE_SHORT(operands); break;
+		case 0x31: registers.sp = DECODE_SHORT(operands); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+}
+
+void CPU::load_hl_to_sp(uint8_t opcode, const uint8_t* operands)
+{
+	registers.sp = registers.hl;
+}
+
+void CPU::load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands)
+{
+	registers.hl = registers.sp + operands[0];
+}
+
+void CPU::load_sp_to_memory(uint8_t opcode, const uint8_t* operands)
+{
+	memory.WriteShort(DECODE_SHORT(operands), registers.sp);
 }

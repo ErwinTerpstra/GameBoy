@@ -46,8 +46,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	emulator.Boot();
 
 	Window window(hInstance, "WinBoyWindow");
-	window.Create("WinBoy", 100, 100);
-	window.SetClientSize(GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT);
+	window.Create("WinBoy", GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT);
 
 	GDIBufferAllocator bufferAllocator(window.handle);
 	Buffer frameBuffer(&bufferAllocator);
@@ -57,8 +56,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	while (true)
 	{
-		emulator.Step();
-		Sleep(16);
+		for (uint32_t step = 0; step < (1 << 16); ++step)
+			emulator.Step();
+
+		Sleep(1);
 
 		window.DrawBuffer(frameBuffer, bufferAllocator);
 		window.ProcessMessages();

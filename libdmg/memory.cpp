@@ -10,6 +10,11 @@ Memory::Memory(uint8_t* buffer) : buffer(buffer)
 
 }
 
+uint8_t* Memory::RetrievePointer(uint16_t address)
+{
+	return buffer + address;
+}
+
 const uint8_t* Memory::RetrievePointer(uint16_t address) const
 {
 	return buffer + address;

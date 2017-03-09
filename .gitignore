@@ -4,3 +4,7 @@ WinBoy/ipch/
 WinBoy/Debug/
 *.opensdf
 *.sdf
+libdmg/x64/
+WinBoy/x64/
+*.opendb
+*.db

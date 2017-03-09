@@ -7,7 +7,8 @@
 #include "bufferallocator.h"
 
 #include "color.h"
-#include "util.h"
+
+#include "../util.h"
 
 using namespace WinBoy;
 

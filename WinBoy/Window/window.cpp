@@ -50,11 +50,13 @@ void Window::Create(const char* title, int width, int height)
 	int frameHeight = GetSystemMetrics(SM_CYFRAME);
 	int captionHeight = GetSystemMetrics(SM_CYSIZE);
 
-	handle = CreateWindowEx(WS_EX_CLIENTEDGE, className, title, WS_OVERLAPPEDWINDOW,
+	handle = CreateWindowEx(WS_EX_CLIENTEDGE, className, title, (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
 			 			    CW_USEDEFAULT, CW_USEDEFAULT, width , height, NULL, NULL, instance, NULL);
 	assert(handle != NULL);
 
 	SetWindowLongPtrW(handle, GWLP_USERDATA, (long)this);
+
+	SetClientSize(width, height);
 
 	closed = false;
 }

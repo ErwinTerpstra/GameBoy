@@ -17,6 +17,7 @@ namespace libdmg
 
 		Memory(uint8_t* buffer);
 
+		uint8_t* RetrievePointer(uint16_t address);
 		const uint8_t* RetrievePointer(uint16_t address) const;
 
 		void WriteByte(uint16_t address, uint8_t value);

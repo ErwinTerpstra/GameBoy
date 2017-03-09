@@ -6,7 +6,8 @@
 #define GB_SCREEN_HEIGHT 144
 #define GB_MAIN_MEM_SIZE 64 * 1024
 
-#define GB_HIMEM_START 0xFF00
+#define GB_IO_REGISTERS 0xFF00
+#define GB_HIMEM 0xFF80
 
 
 #endif
