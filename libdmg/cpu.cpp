@@ -8,9 +8,12 @@
 
 using namespace libdmg;
 
-CPU::CPU(Memory& memory) : memory(memory)
-{
+const uint16_t CPU::INTERRUPT_VECTORS[] = { 0x40, 0x48, 0x50, 0x58, 0x60 };
 
+CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), ticks(0)
+{
+	interruptEnableRegister = memory.RetrievePointer(GB_REG_IE);
+	interruptFlagRegister = memory.RetrievePointer(GB_REG_IF);
 }
 
 void CPU::Reset()
@@ -23,16 +26,51 @@ void CPU::Reset()
 	registers.sp = 0xFFFE;
 	registers.pc = 0x0100;
 
+	uint8_t* buffer = memory.RetrievePointer(0);
+	buffer[0xFF05] = 0x00; // TIMA
+	buffer[0xFF06] = 0x00; // TMA
+	buffer[0xFF07] = 0x00; // TAC
+	buffer[0xFF10] = 0x80; // NR10
+	buffer[0xFF11] = 0xBF; // NR11
+	buffer[0xFF12] = 0xF3; // NR12
+	buffer[0xFF14] = 0xBF; // NR14
+	buffer[0xFF16] = 0x3F; // NR21
+	buffer[0xFF17] = 0x00; // NR22
+	buffer[0xFF19] = 0xBF; // NR24
+	buffer[0xFF1A] = 0x7F; // NR30
+	buffer[0xFF1B] = 0xFF; // NR31
+	buffer[0xFF1C] = 0x9F; // NR32
+	buffer[0xFF1E] = 0xBF; // NR33
+	buffer[0xFF20] = 0xFF; // NR41
+	buffer[0xFF21] = 0x00; // NR42
+	buffer[0xFF22] = 0x00; // NR43
+	buffer[0xFF23] = 0xBF; // NR30
+	buffer[0xFF24] = 0x77; // NR50
+	buffer[0xFF25] = 0xF3; // NR51
+	buffer[0xFF26] = 0xF1; // NR52
+	buffer[0xFF40] = 0x91; // LCDC
+	buffer[0xFF42] = 0x00; // SCY
+	buffer[0xFF43] = 0x00; // SCX
+	buffer[0xFF45] = 0x00; // LYC
+	buffer[0xFF47] = 0xFC; // BGP
+	buffer[0xFF48] = 0xFF; // OBP0
+	buffer[0xFF49] = 0xFF; // OBP1
+	buffer[0xFF4A] = 0x00; // WY
+	buffer[0xFF4B] = 0x00; // WX
+	buffer[0xFFFF] = 0x00; // IE
 }
 
 void CPU::ExecuteNextInstruction()
 {
+	// Sync the timer
+	timer.Sync();
+
 	// Read the opcode the PC points at
 	uint8_t opcode;
 	memory.Read(registers.pc, opcode);
 
 	// Read the instruction description from the instruction map
-	Instruction& instruction = instructionMap[opcode];
+	const Instruction& instruction = instructionMap[opcode];
 
 	if (instruction.handler == NULL)
 	{
@@ -48,6 +86,43 @@ void CPU::ExecuteNextInstruction()
 
 	// Execute the instruction
 	(this->*instruction.handler)(opcode, operands);
+
+	// Increase the clock cycle count
+	ticks += instruction.duration;
+}
+
+void CPU::RequestInterrupt(Interrupt interrupt)
+{
+	// Set the flag in the IF register
+	*interruptFlagRegister |= (1 << interrupt);
+
+	TestInterrupt(interrupt);
+}
+
+bool CPU::TestInterrupt(Interrupt interrupt)
+{
+	// If the interrupt master enable flag is set, execute the interrupt
+	if (ime && (*interruptEnableRegister & (1 << interrupt)))
+	{
+		ExecuteInterrupt(interrupt);
+		return true;
+	}
+
+	return false;
+}
+
+void CPU::ExecuteInterrupt(Interrupt interrupt)
+{
+	// Clear the flag in the IF register
+	*interruptFlagRegister &= ~(1 << interrupt);
+
+	ime = false;
+
+	// Push the program counter to the stack
+	WriteStackShort(registers.pc);
+
+	// Jump to the interrupt vector
+	registers.pc = INTERRUPT_VECTORS[interrupt];
 }
 
 void CPU::WriteStackByte(uint8_t value)
@@ -62,8 +137,11 @@ void CPU::WriteStackShort(uint16_t value)
 	registers.sp -= 2;
 }
 
-uint8_t CPU::ReadSourceValue(uint8_t opcode)
+uint8_t CPU::ReadSourceValue(uint8_t opcode, const uint8_t* operands) const
 {
+	if (opcode > 0xC0 && (opcode % 8) == 0x6)
+		return operands[0];
+
 	switch (opcode % 8)
 	{
 		case 0x0: return registers.b;
@@ -77,6 +155,23 @@ uint8_t CPU::ReadSourceValue(uint8_t opcode)
 		case 0x6: return memory.ReadByte(registers.hl);
 	}
 
+}
+
+
+void CPU::enable_interupts(uint8_t opcode, const uint8_t* operands)
+{
+	ime = true;
+
+	for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
+	{
+		if (TestInterrupt((Interrupt) interrupt))
+			break;
+	}
+}
+
+void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
+{
+	ime = false;
 }
 
 void CPU::jump(uint8_t opcode, const uint8_t* operands)
@@ -135,7 +230,7 @@ void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	uint16_t result = registers.a + value;
 	
 	SetFlag(FLAG_ZERO, result == 0);
@@ -148,7 +243,7 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	uint16_t result = registers.a + value + GetFlag(FLAG_CARRY);
 
 	SetFlag(FLAG_ZERO, result == 0);
@@ -161,7 +256,7 @@ void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_sub(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	int16_t result = registers.a - value;
 
 	SetFlag(FLAG_ZERO, result == 0);
@@ -174,7 +269,7 @@ void CPU::alu_sub(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_sbc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	int16_t result = registers.a - value - GetFlag(FLAG_CARRY);
 
 	SetFlag(FLAG_ZERO, result == 0);
@@ -187,7 +282,7 @@ void CPU::alu_sbc(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_and(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	registers.a = registers.a & value;
 
 	SetFlag(FLAG_ZERO, registers.a == 0);
@@ -198,7 +293,7 @@ void CPU::alu_and(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_or(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	registers.a = registers.a & value;
 
 	SetFlag(FLAG_ZERO, registers.a == 0);
@@ -209,7 +304,7 @@ void CPU::alu_or(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_xor(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 
 	registers.a = registers.a & value;
 
@@ -221,7 +316,7 @@ void CPU::alu_xor(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_cmp(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 	int16_t result = registers.a - value;
 
 	SetFlag(FLAG_ZERO, result == 0);
@@ -281,6 +376,33 @@ void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
 }
 
+void CPU::alu_inc_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	switch (opcode / 16)
+	{
+		case 0x0: ++registers.bc; break;
+		case 0x1: ++registers.de; break;
+		case 0x2: ++registers.hl; break;
+		case 0x3: ++registers.sp; break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+}
+
+void CPU::alu_dec_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	switch (opcode / 16)
+	{
+		case 0x0: --registers.bc; break;
+		case 0x1: --registers.de; break;
+		case 0x2: --registers.hl; break;
+		case 0x3: --registers.sp; break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+
+}
+
 void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
 {
 	switch (opcode)
@@ -302,7 +424,7 @@ void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
 
 void CPU::load_memory_to_memory(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode);
+	uint8_t value = ReadSourceValue(opcode, operands);
 
 	switch (opcode / 8)
 	{
@@ -347,14 +469,24 @@ void CPU::load_memory_to_accumulator(uint8_t opcode, const uint8_t* operands)
 
 }
 
-void CPU::load_accumulator_to_io_register(uint8_t opcode, const uint8_t* operands)
+void CPU::load_accumulator_to_constant_io_register(uint8_t opcode, const uint8_t* operands)
 {
 	memory.WriteByte(GB_IO_REGISTERS + operands[0], registers.a);
 }
 
-void CPU::load_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands)
+void CPU::load_constant_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands)
 {
 	registers.a = memory.ReadByte(GB_IO_REGISTERS + operands[0]);
+}
+
+void CPU::load_accumulator_to_c_plus_io_register(uint8_t opcode, const uint8_t* operands)
+{
+	memory.WriteByte(GB_IO_REGISTERS + registers.c, registers.a);
+}
+
+void CPU::load_c_plus_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands)
+{
+	registers.a = memory.ReadByte(GB_IO_REGISTERS + registers.c);
 }
 
 void CPU::load_constant_16bit(uint8_t opcode, const uint8_t* operands)
@@ -383,4 +515,17 @@ void CPU::load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands)
 void CPU::load_sp_to_memory(uint8_t opcode, const uint8_t* operands)
 {
 	memory.WriteShort(DECODE_SHORT(operands), registers.sp);
+}
+
+void CPU::load_accumulator_to_memory_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint16_t address = DECODE_SHORT(operands);
+	memory.WriteByte(address, registers.a);
+}
+
+void CPU::load_memory_to_accumulator_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint16_t address = DECODE_SHORT(operands);
+	registers.a = memory.ReadByte(address);
+
 }

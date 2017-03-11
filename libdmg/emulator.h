@@ -1,23 +1,22 @@
 #ifndef _EMULATOR_H_
 #define _EMULATOR_H_
 
-#include "cpu.h"
-#include "cartridge.h"
-#include "memory.h"
-
 namespace libdmg
 {
+	class CPU;
+	class Memory;
+	class Cartridge;
+	class VideoController;
 
 	class Emulator
 	{
 	public:
-		CPU cpu;
-
-		Cartridge& cartridge;
+		CPU& cpu;
 		Memory& memory;
-
+		Cartridge& cartridge;
+		VideoController& videoController;
 	public:
-		Emulator(Memory& memory, Cartridge& cartridge);
+		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, VideoController& videoController);
 		
 		void Boot();
 

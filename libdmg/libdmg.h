@@ -6,6 +6,7 @@
 #include "cpu.h"
 #include "memory.h"
 #include "cartridge.h"
+#include "videocontroller.h"
 #include "emulator.h"
 
 #endif

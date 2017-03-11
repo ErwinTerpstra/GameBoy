@@ -4,12 +4,24 @@
 #include "environment.h"
 #include "util.h"
 
+#include "timer.h"
+
 namespace libdmg
 {
 	class Memory;
 
 	class CPU
 	{
+	public:
+		enum Interrupt
+		{
+			INT_VBLANK = 0,
+			INT_LCD_STAT = 1,
+			INT_TIMER = 2,
+			INT_SERIAL = 3,
+			INT_JOYPAD = 4
+		};
+
 	private:
 		struct Registers
 		{
@@ -58,13 +70,22 @@ namespace libdmg
 			FLAG_CARRY = 16
 		};
 
-		static Instruction instructionMap[256];
+		static const Instruction instructionMap[256];
 
-		Registers registers;
+		static const uint16_t INTERRUPT_VECTORS[];
 
 		Memory& memory;
 
+		Registers registers;
+
+		Timer timer;
+
+		uint64_t ticks;
+
 		bool ime;
+
+		uint8_t* interruptFlagRegister;
+		uint8_t* interruptEnableRegister;
 
 	public:
 		CPU(Memory& memory);
@@ -72,30 +93,27 @@ namespace libdmg
 		void Reset();
 		void ExecuteNextInstruction();
 
+		void RequestInterrupt(Interrupt interrupt);
+		bool TestInterrupt(Interrupt interrupt);
+		void ExecuteInterrupt(Interrupt interrupt);
+
+		const uint64_t& Ticks() const { return ticks; }
+
 	private:
 
-		DMG_INLINE void CPU::SetFlag(Flags flag, bool state)
-		{
-			if (state)
-				registers.f |= flag;
-			else
-				registers.f &= ~flag;
-		}
+		DMG_INLINE void CPU::SetFlag(Flags flag, bool state) { registers.f = SET_MASK_IF(registers.f, flag, state); }
 
-		DMG_INLINE bool CPU::GetFlag(Flags flag)
-		{
-			return (registers.f & flag) == flag;
-		}
+		DMG_INLINE bool CPU::GetFlag(Flags flag) { return READ_MASK(registers.f, flag); }
 
 		void WriteStackByte(uint8_t value);
 		void WriteStackShort(uint16_t value);
 
-		uint8_t ReadSourceValue(uint8_t opcode);
+		uint8_t ReadSourceValue(uint8_t opcode, const uint8_t* operands) const;
 		
 		/* CPU control */
 		void nop(uint8_t opcode, const uint8_t* operands) { }
-		void enable_interupts(uint8_t opcode, const uint8_t* operands) { ime = true; }
-		void disable_interrupts(uint8_t opcode, const uint8_t* operands) { ime = false; }
+		void enable_interupts(uint8_t opcode, const uint8_t* operands);
+		void disable_interrupts(uint8_t opcode, const uint8_t* operands);
 
 		void jump(uint8_t opcode, const uint8_t* operands);
 		void jump_to_offset(uint8_t opcode, const uint8_t* operands);
@@ -120,19 +138,27 @@ namespace libdmg
 
 		void encode_bcd(uint8_t opcode, const uint8_t* operands);
 
+		/* 16-bit alu */
+		void alu_inc_16bit(uint8_t opcode, const uint8_t* operands);
+		void alu_dec_16bit(uint8_t opcode, const uint8_t* operands);
+
 		/* 8-bit loads */
 		void load_constant(uint8_t opcode, const uint8_t* operands);
 		void load_memory_to_memory(uint8_t opcode, const uint8_t* operands);
 		void load_accumulator_to_memory(uint8_t opcode, const uint8_t* operands);
 		void load_memory_to_accumulator(uint8_t opcode, const uint8_t* operands);
-		void load_accumulator_to_io_register(uint8_t opcode, const uint8_t* operands);
-		void load_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands);
+		void load_accumulator_to_constant_io_register(uint8_t opcode, const uint8_t* operands);
+		void load_constant_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands);
+		void load_accumulator_to_c_plus_io_register(uint8_t opcode, const uint8_t* operands);
+		void load_c_plus_io_register_to_accumulator(uint8_t opcode, const uint8_t* operands);
 
 		/* 16-bit loads */
 		void load_constant_16bit(uint8_t opcode, const uint8_t* operands);
 		void load_hl_to_sp(uint8_t opcode, const uint8_t* operands);
 		void load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands);
 		void load_sp_to_memory(uint8_t opcode, const uint8_t* operands);
+		void load_accumulator_to_memory_16bit(uint8_t opcode, const uint8_t* operands);
+		void load_memory_to_accumulator_16bit(uint8_t opcode, const uint8_t* operands);
 	};
 }
 

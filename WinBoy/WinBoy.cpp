@@ -23,6 +23,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	uint8_t* romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
 	uint8_t* memoryBuffer = new uint8_t[GB_MAIN_MEM_SIZE];
+	uint8_t* videoBuffer = new uint8_t[GB_VIDEO_BUFFER_WIDTH * GB_VIDEO_BUFFER_HEIGHT];
 
 	FILE* handle;
 	errno_t error = fopen_s(&handle, ROM_FILE, "rb");
@@ -40,9 +41,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	printf("[WinBoy]: Rom file read with %u bytes.\n", romSize);
 	
 	Memory memory(memoryBuffer);
+	CPU cpu(memory);
 	Cartridge cartridge(romBuffer);
+	VideoController videoController(cpu, memory, videoBuffer);
 
-	Emulator emulator(memory, cartridge);
+	Emulator emulator(cpu, memory, cartridge, videoController);
 	emulator.Boot();
 
 	Window window(hInstance, "WinBoyWindow");

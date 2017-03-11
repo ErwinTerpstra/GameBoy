@@ -2,6 +2,8 @@
 
 #include "util.h"
 
+#include "gameboy.h"
+
 using namespace libdmg;
 
 Memory::Memory(uint8_t* buffer) : buffer(buffer)
@@ -22,6 +24,15 @@ const uint8_t* Memory::RetrievePointer(uint16_t address) const
 
 void Memory::WriteByte(uint16_t address, uint8_t value)
 {
+	if (address == GB_REG_DMA)
+	{
+		uint16_t source = value * 100;
+		for (uint8_t offset = 0; offset < 0x9F; ++offset)
+			buffer[GB_OAM + offset] = buffer[source + offset];
+
+		return;
+	}
+
 	buffer[address] = value;
 }
 

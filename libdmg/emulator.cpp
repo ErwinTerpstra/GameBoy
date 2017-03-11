@@ -1,10 +1,16 @@
 #include "emulator.h"
 
+#include "cpu.h"
+#include "memory.h"
+#include "cartridge.h"
+#include "videocontroller.h"
+
 #include "debug.h"
 
 using namespace libdmg;
 
-Emulator::Emulator(Memory& memory, Cartridge& cartridge) : cpu(memory), memory(memory), cartridge(cartridge)
+Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, VideoController& videoController) : 
+	cpu(cpu), memory(memory), cartridge(cartridge), videoController(videoController)
 {
 
 }
@@ -27,4 +33,5 @@ void Emulator::Boot()
 void Emulator::Step()
 {
 	cpu.ExecuteNextInstruction();
+	videoController.Step();
 }

@@ -10,6 +10,8 @@
     <ClInclude Include="memory.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="videocontroller.h" />
+    <ClInclude Include="timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />
@@ -17,5 +19,7 @@
     <ClCompile Include="emulator.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="instructions.cpp" />
+    <ClCompile Include="videocontroller.cpp" />
+    <ClCompile Include="timer.cpp" />
   </ItemGroup>
 </Project>
