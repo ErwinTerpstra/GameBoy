@@ -22,7 +22,7 @@ namespace libdmg
 			INT_JOYPAD = 4
 		};
 
-	private:
+	public:
 		struct Registers
 		{
 			union
@@ -70,8 +70,9 @@ namespace libdmg
 			FLAG_CARRY = 16
 		};
 
-		static const Instruction instructionMap[256];
-
+		static const Instruction INSTRUCTION_MAP[256];
+	
+	private:
 		static const uint16_t INTERRUPT_VECTORS[];
 
 		Memory& memory;
@@ -98,12 +99,15 @@ namespace libdmg
 		void ExecuteInterrupt(Interrupt interrupt);
 
 		const uint64_t& Ticks() const { return ticks; }
-
+		const Registers& GetRegisters() const { return registers; }
 	private:
 
 		DMG_INLINE void CPU::SetFlag(Flags flag, bool state) { registers.f = SET_MASK_IF(registers.f, flag, state); }
 
 		DMG_INLINE bool CPU::GetFlag(Flags flag) { return READ_MASK(registers.f, flag); }
+
+		uint8_t ReadStackByte();
+		uint16_t ReadStackShort();
 
 		void WriteStackByte(uint8_t value);
 		void WriteStackShort(uint16_t value);
@@ -121,6 +125,10 @@ namespace libdmg
 
 		void call(uint8_t opcode, const uint8_t* operands);
 		void restart(uint8_t opcode, const uint8_t* operands);
+
+		void return_default(uint8_t opcode, const uint8_t* operands);
+		void return_conditional(uint8_t opcode, const uint8_t* operands);
+		void return_enable_interrupts(uint8_t opcode, const uint8_t* operands);
 
 		/* 8-bit ALU */
 		void alu_add(uint8_t opcode, const uint8_t* operands);

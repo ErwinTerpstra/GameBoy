@@ -17,6 +17,8 @@
 
 #define GB_MAX_SCANLINE				153
 
+#define GB_ISR_DURATION				5
+
 #define GB_OAM				0xFE00
 #define GB_IO_REGISTERS		0xFF00
 #define GB_HIMEM			0xFF80

@@ -33,5 +33,69 @@ void Emulator::Boot()
 void Emulator::Step()
 {
 	cpu.ExecuteNextInstruction();
-	videoController.Step();
+	videoController.Sync();
+}
+
+void Emulator::PrintRegisters() const
+{
+	const CPU::Registers& registers = cpu.GetRegisters();
+
+	Debug::Print("Registers:\n");
+	
+	Debug::Print("a: 0x%02X; f: 0x%02X; af: 0x%04X\n", registers.a, registers.f, registers.af);
+	Debug::Print("b: 0x%02X; c: 0x%02X; bc: 0x%04X\n", registers.b, registers.c, registers.bc);
+	Debug::Print("d: 0x%02X; e: 0x%02X; de: 0x%04X\n", registers.d, registers.e, registers.de);
+	Debug::Print("h: 0x%02X; l: 0x%02X; hl: 0x%04X\n", registers.h, registers.l, registers.hl);
+	
+	Debug::Print("z: %d; n: %d; h: %d, c: %d\n",
+		READ_MASK(registers.f, CPU::FLAG_ZERO),
+		READ_MASK(registers.f, CPU::FLAG_SUBTRACT),
+		READ_MASK(registers.f, CPU::FLAG_HALF_CARRY),
+		READ_MASK(registers.f, CPU::FLAG_CARRY));
+
+	Debug::Print("pc: 0x%04X; sp: 0x%04X\n", registers.pc, registers.sp);
+	Debug::Print("\n");
+}
+
+void Emulator::PrintDisassembly(uint16_t instructionCount) const
+{
+	const CPU::Registers& registers = cpu.GetRegisters();
+
+	uint16_t address = registers.pc;
+
+	char disassemblyBuffer[256];
+	
+	Debug::Print("Disassembly:\n");
+
+	for (uint16_t instructionIdx = 0; instructionIdx < instructionCount; ++instructionIdx)
+	{
+		uint8_t opcode = memory.ReadByte(address);
+		const CPU::Instruction& instruction = CPU::INSTRUCTION_MAP[opcode];
+		
+		switch (instruction.length)
+		{
+			case 1:
+				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
+				break;
+
+			case 2:
+				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadByte(address + 1));
+				break;
+
+			case 3:
+				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 2));
+				break;
+
+			default:
+				assert(false && "Not implemented");
+				break;
+		}
+
+
+		Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
+
+		address += instruction.length;
+	}
+	
+	Debug::Print("\n");
 }

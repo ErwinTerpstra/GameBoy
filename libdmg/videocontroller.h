@@ -50,15 +50,17 @@ namespace libdmg
 		uint8_t* statRegister;
 
 		uint8_t scanline;
-		uint16_t ticks;
+		uint64_t ticks;
+		uint16_t modeTicks;
 		Mode currentMode;
 
 	public:
 		VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
+		void Sync();
+	private:
 		void Step();
 
-	private:
 		void SwitchMode(Mode mode);
 
 		void SetScanline(uint8_t scanline);

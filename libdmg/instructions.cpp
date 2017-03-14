@@ -2,7 +2,7 @@
 
 using namespace libdmg;
 
-const CPU::Instruction CPU::instructionMap[] =
+const CPU::Instruction CPU::INSTRUCTION_MAP[] =
 {
 	/* 0x00 */{ "NOP", 1, 4, &CPU::nop },
 	/* 0x01 */{ "LD BC,0x%04X", 3, 12, &CPU::load_constant_16bit },
@@ -208,7 +208,7 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xAE */{ "CP (HL)", 1, 8, &CPU::alu_cmp },
 	/* 0xAF */{ "CP A", 1, 4, &CPU::alu_cmp },
 
-	/* 0xC0 */{ "<Unkown>", 1, 8, NULL },
+	/* 0xC0 */{ "RET NZ", 1, 8, &CPU::return_conditional },
 	/* 0xC1 */{ "<Unkown>", 1, 12, NULL },
 	/* 0xC2 */{ "<Unkown>", 3, 12, NULL },
 	/* 0xC3 */{ "JP 0x%04X", 3, 16, &CPU::jump },
@@ -216,8 +216,8 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xC5 */{ "<Unkown>", 1, 16, NULL },
 	/* 0xC6 */{ "ADD A,0x%02X", 2, 8, &CPU::alu_add },
 	/* 0xC7 */{ "RST 00H", 1, 16, &CPU::restart },
-	/* 0xC8 */{ "<Unkown>", 1, 8, NULL },
-	/* 0xC9 */{ "<Unkown>", 1, 16, NULL },
+	/* 0xC8 */{ "RET Z", 1, 8, &CPU::return_conditional },
+	/* 0xC9 */{ "RET", 1, 16, &CPU::return_default },
 	/* 0xCA */{ "<Unkown>", 3, 12, NULL },
 	/* 0xCB */{ "Prefix CB", 1, 4, NULL },
 	/* 0xCC */{ "<Unkown>", 3, 12, NULL },
@@ -225,7 +225,7 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xCE */{ "ADC A,0x%02X", 2, 8, &CPU::alu_adc },
 	/* 0xCF */{ "RST 08H", 1, 16, &CPU::restart },
 
-	/* 0xD0 */{ "<Unkown>", 1, 8, NULL },
+	/* 0xD0 */{ "RET NC", 1, 8, &CPU::return_conditional },
 	/* 0xD1 */{ "<Unkown>", 1, 12, NULL },
 	/* 0xD2 */{ "<Unkown>", 3, 12, NULL },
 	/* 0xD3 */{ "N/I", 0, 0, NULL },
@@ -233,8 +233,8 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xD5 */{ "<Unkown>", 1, 16, NULL },
 	/* 0xD6 */{ "SUB 0x%02X", 2, 8, &CPU::alu_sub },
 	/* 0xD7 */{ "RST 10H", 1, 16, &CPU::restart },
-	/* 0xD8 */{ "<Unkown>", 1, 8, NULL },
-	/* 0xD9 */{ "<Unkown>", 1, 16, NULL },
+	/* 0xD8 */{ "RET C", 1, 8, &CPU::return_conditional },
+	/* 0xD9 */{ "RETI", 1, 16, &CPU::return_enable_interrupts },
 	/* 0xDA */{ "<Unkown>", 3, 12, NULL },
 	/* 0xDB */{ "N/I", 0, 0, NULL },
 	/* 0xDC */{ "<Unkown>", 3, 12, NULL },
@@ -242,7 +242,7 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xDE */{ "SBC A,0x%02X", 2, 8, &CPU::alu_sbc },
 	/* 0xDF */{ "RST 18H", 1, 16, &CPU::restart },
 
-	/* 0xE0 */{ "LDH 0x%02X,A", 2, 12, &CPU::load_accumulator_to_constant_io_register },
+	/* 0xE0 */{ "LDH (0xFF%02X),A", 2, 12, &CPU::load_accumulator_to_constant_io_register },
 	/* 0xE1 */{ "<Unkown>", 1, 4, NULL },
 	/* 0xE2 */{ "LD (0xFF00+C),A", 2, 8, &CPU::load_accumulator_to_c_plus_io_register },
 	/* 0xE3 */{ "N/I", 0, 0, NULL },
@@ -259,7 +259,7 @@ const CPU::Instruction CPU::instructionMap[] =
 	/* 0xEE */{ "XOR 0x%02X", 2, 8, &CPU::alu_xor },
 	/* 0xEF */{ "RST 28H", 1, 16, &CPU::restart },
 
-	/* 0xF0 */{ "LDH A,0x%02X", 2, 12, &CPU::load_constant_io_register_to_accumulator },
+	/* 0xF0 */{ "LDH A,(0xFF%02X)", 2, 12, &CPU::load_constant_io_register_to_accumulator },
 	/* 0xF1 */{ "<Unkown>", 1, 12, NULL },
 	/* 0xF2 */{ "LD A,(0xFF00+C)", 2, 8, &CPU::load_c_plus_io_register_to_accumulator },
 	/* 0xF3 */{ "DI", 1, 4, &CPU::disable_interrupts },

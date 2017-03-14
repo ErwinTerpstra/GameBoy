@@ -70,7 +70,7 @@ void CPU::ExecuteNextInstruction()
 	memory.Read(registers.pc, opcode);
 
 	// Read the instruction description from the instruction map
-	const Instruction& instruction = instructionMap[opcode];
+	const Instruction& instruction = INSTRUCTION_MAP[opcode];
 
 	if (instruction.handler == NULL)
 	{
@@ -123,6 +123,21 @@ void CPU::ExecuteInterrupt(Interrupt interrupt)
 
 	// Jump to the interrupt vector
 	registers.pc = INTERRUPT_VECTORS[interrupt];
+
+	ticks += GB_ISR_DURATION;
+}
+
+uint8_t CPU::ReadStackByte()
+{
+	return memory.ReadByte(++registers.sp);
+}
+
+uint16_t CPU::ReadStackShort()
+{
+	uint16_t value = memory.ReadShort(registers.sp + 1);
+	registers.sp += 2;
+
+	return value;
 }
 
 void CPU::WriteStackByte(uint8_t value)
@@ -133,7 +148,7 @@ void CPU::WriteStackByte(uint8_t value)
 
 void CPU::WriteStackShort(uint16_t value)
 {
-	memory.WriteShort(registers.sp, value);
+	memory.WriteShort(registers.sp - 1, value);
 	registers.sp -= 2;
 }
 
@@ -215,6 +230,38 @@ void CPU::restart(uint8_t opcode, const uint8_t* operands)
 	WriteStackShort(registers.pc);
 	registers.pc = opcode - 0xC7;
 }
+
+void CPU::return_default(uint8_t opcode, const uint8_t* operands)
+{
+	registers.pc = ReadStackShort();
+}
+
+void CPU::return_conditional(uint8_t opcode, const uint8_t* operands)
+{
+	bool conditional;
+
+	switch (opcode)
+	{
+		case 0xC0: conditional = !GetFlag(FLAG_ZERO); break;
+		case 0xC8: conditional = GetFlag(FLAG_ZERO); break;
+		case 0xD0: conditional = !GetFlag(FLAG_CARRY); break;
+		case 0xD8: conditional = GetFlag(FLAG_CARRY); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+
+	if (conditional)
+		registers.pc = ReadStackShort();
+
+}
+
+void CPU::return_enable_interrupts(uint8_t opcode, const uint8_t* operands)
+{
+	registers.pc = ReadStackShort();
+
+	enable_interupts(opcode, operands);
+}
+
 
 void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
 {

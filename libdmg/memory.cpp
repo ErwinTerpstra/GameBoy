@@ -1,6 +1,7 @@
 #include "memory.h"
 
 #include "util.h"
+#include "debug.h"
 
 #include "gameboy.h"
 

@@ -3,6 +3,8 @@
 
 #include "gameboy.h"
 
+#include "debug.h"
+
 #include "cpu.h"
 #include "memory.h"
 #include "cartridge.h"

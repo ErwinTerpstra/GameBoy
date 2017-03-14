@@ -9,10 +9,20 @@
 
 using namespace libdmg;
 
-VideoController::VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer) : cpu(cpu), memory(memory), videoBuffer(videoBuffer), scanline(0), ticks(0), currentMode(MODE_VBLANK)
+VideoController::VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer) : 
+	cpu(cpu), memory(memory), videoBuffer(videoBuffer), scanline(0), 
+	ticks(0), modeTicks(0), currentMode(MODE_VBLANK)
 {
 	lcdControlRegister = memory.RetrievePointer(GB_REG_LCDC);
 	statRegister = memory.RetrievePointer(GB_REG_STAT);
+}
+
+void VideoController::Sync()
+{
+	const uint64_t& targetTicks = cpu.Ticks();
+	
+	while (ticks < targetTicks)
+		Step();
 }
 
 void VideoController::Step()
@@ -21,7 +31,7 @@ void VideoController::Step()
 	{
 		case MODE_HBLANK:
 
-			if (++ticks == GB_HBLANK_DURATION)
+			if (++modeTicks == GB_HBLANK_DURATION)
 			{
 				if (scanline + 1 == GB_SCREEN_HEIGHT)
 					SwitchMode(MODE_VBLANK);
@@ -29,16 +39,15 @@ void VideoController::Step()
 					SwitchMode(MODE_SEARCHING_OAM);
 
 				SetScanline(scanline + 1);
-
 			}
 
 			break;
 
 		case MODE_VBLANK:
-			if (scanline < GB_MAX_SCANLINE)
+			if (modeTicks > 0 && (modeTicks % 500) == 0)
 				SetScanline(scanline + 1);
 
-			if (++ticks == GB_VBLANK_DURATION)
+			if (++modeTicks == GB_VBLANK_DURATION)
 			{
 				scanline = 0;
 				SwitchMode(MODE_SEARCHING_OAM);
@@ -47,25 +56,26 @@ void VideoController::Step()
 
 		case MODE_SEARCHING_OAM:
 
-			if (++ticks == GB_SEARCH_OAM_DURATION)
+			if (++modeTicks == GB_SEARCH_OAM_DURATION)
 				SwitchMode(MODE_TRANSFERRING_DATA);
 
 			break;
 
 		case MODE_TRANSFERRING_DATA:
 
-			if (++ticks == GB_TRANSFER_DATA_DURATION)
+			if (++modeTicks == GB_TRANSFER_DATA_DURATION)
 				SwitchMode(MODE_HBLANK);
 
 			break;
 	}
 
+	++ticks;
 }
 
 void VideoController::SwitchMode(Mode mode)
 {
 	currentMode = mode;
-	ticks = 0;
+	modeTicks = 0;
 
 	// Clear the mode bits
 	*statRegister &= 0xFC;
