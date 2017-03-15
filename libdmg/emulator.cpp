@@ -87,7 +87,7 @@ void Emulator::PrintDisassembly(uint16_t instructionCount) const
 					break;
 
 				case 3:
-					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 2));
+					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 1));
 					break;
 
 				default:
