@@ -18,6 +18,9 @@ CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), ticks(0)
 
 void CPU::Reset()
 {
+	interruptMasterEnable = true;
+	prefixNextInstruction = false;
+
 	registers.af = 0x01B0;
 	registers.bc = 0x0013;
 	registers.de = 0x00D8;
@@ -70,13 +73,15 @@ void CPU::ExecuteNextInstruction()
 	memory.Read(registers.pc, opcode);
 
 	// Read the instruction description from the instruction map
-	const Instruction& instruction = INSTRUCTION_MAP[opcode];
+	const Instruction& instruction = prefixNextInstruction ? PREFIXED_INSTRUCTION_MAP[opcode] : INSTRUCTION_MAP[opcode];
 
 	if (instruction.handler == NULL)
 	{
-		printf("Missing instruction handler for opcode 0x%02X! at 0x%04X\n", opcode, registers.pc);
+		printf("Missing instruction handler for opcode 0x%s%02X! at 0x%04X\n", prefixNextInstruction ? "CB" : "", opcode, registers.pc);
 		Debug::Halt();
 	}
+
+	prefixNextInstruction = false;
 
 	// Retrieve a pointer to where the operands for this instruction are location
 	const uint8_t* operands = memory.RetrievePointer(registers.pc + 1);
@@ -102,7 +107,7 @@ void CPU::RequestInterrupt(Interrupt interrupt)
 bool CPU::TestInterrupt(Interrupt interrupt)
 {
 	// If the interrupt master enable flag is set, execute the interrupt
-	if (ime && (*interruptEnableRegister & (1 << interrupt)))
+	if (interruptMasterEnable && (*interruptEnableRegister & (1 << interrupt)))
 	{
 		ExecuteInterrupt(interrupt);
 		return true;
@@ -116,7 +121,7 @@ void CPU::ExecuteInterrupt(Interrupt interrupt)
 	// Clear the flag in the IF register
 	*interruptFlagRegister &= ~(1 << interrupt);
 
-	ime = false;
+	interruptMasterEnable = false;
 
 	// Push the program counter to the stack
 	WriteStackShort(registers.pc);
@@ -172,10 +177,25 @@ uint8_t CPU::ReadSourceValue(uint8_t opcode, const uint8_t* operands) const
 
 }
 
+uint8_t* CPU::GetSourcePointer(uint8_t opcode)
+{
+	switch (opcode % 8)
+	{
+		case 0x0: return &registers.b;
+		case 0x1: return &registers.c;
+		case 0x2: return &registers.d;
+		case 0x3: return &registers.e;
+		case 0x4: return &registers.h;
+		case 0x5: return &registers.l;
+		case 0x7: return &registers.a;
+
+		case 0x6: return memory.RetrievePointer(registers.hl);
+	}
+}
 
 void CPU::enable_interupts(uint8_t opcode, const uint8_t* operands)
 {
-	ime = true;
+	interruptMasterEnable = true;
 
 	for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
 	{
@@ -186,7 +206,7 @@ void CPU::enable_interupts(uint8_t opcode, const uint8_t* operands)
 
 void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
 {
-	ime = false;
+	interruptMasterEnable = false;
 }
 
 void CPU::jump(uint8_t opcode, const uint8_t* operands)
@@ -262,6 +282,10 @@ void CPU::return_enable_interrupts(uint8_t opcode, const uint8_t* operands)
 	enable_interupts(opcode, operands);
 }
 
+void CPU::prefix_cb(uint8_t opcode, const uint8_t* operands)
+{
+	prefixNextInstruction = true;
+}
 
 void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
 {
@@ -278,12 +302,12 @@ void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
 void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
-	uint16_t result = registers.a + value;
+	uint8_t result = registers.a + value;
 	
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
 	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
-	SetFlag(FLAG_CARRY, result > 255);
+	SetFlag(FLAG_CARRY, result < registers.a);
 
 	registers.a = result;
 }
@@ -291,12 +315,12 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
-	uint16_t result = registers.a + value + GetFlag(FLAG_CARRY);
+	uint8_t result = registers.a + value + GetFlag(FLAG_CARRY);
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
 	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
-	SetFlag(FLAG_CARRY, result > 255);
+	SetFlag(FLAG_CARRY, result < registers.a);
 
 	registers.a = result;
 }
@@ -450,6 +474,29 @@ void CPU::alu_dec_16bit(uint8_t opcode, const uint8_t* operands)
 
 }
 
+void CPU::alu_add_hl_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint16_t value;
+
+	switch (opcode)
+	{
+		case 0x09: value = registers.bc; break;
+		case 0x19: value = registers.de; break;
+		case 0x29: value = registers.hl; break;
+		case 0x39: value = registers.sp; break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+
+	uint16_t result = registers.hl + value;
+
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = SET_MASK_IF(registers.f, FLAG_HALF_CARRY, (value ^ result ^ registers.hl) & 0x800);
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, result < registers.hl);
+
+	registers.hl = result;
+}
+
 void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
 {
 	switch (opcode)
@@ -575,4 +622,82 @@ void CPU::load_memory_to_accumulator_16bit(uint8_t opcode, const uint8_t* operan
 	uint16_t address = DECODE_SHORT(operands);
 	registers.a = memory.ReadByte(address);
 
+}
+
+void CPU::push_stack_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	switch (opcode)
+	{
+		case 0xC5: WriteStackShort(registers.bc); break;
+		case 0xD5: WriteStackShort(registers.de); break;
+		case 0xE5: WriteStackShort(registers.hl); break;
+		case 0xF5: WriteStackShort(registers.sp); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+}
+
+void CPU::pop_stack_16bit(uint8_t opcode, const uint8_t* operands)
+{
+	switch (opcode)
+	{
+		case 0xC1: registers.bc = ReadStackShort(); break;
+		case 0xD1: registers.de = ReadStackShort(); break;
+		case 0xE1: registers.hl = ReadStackShort(); break;
+		case 0xF1: registers.sp = ReadStackShort(); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+}
+
+void CPU::rotate_accumulator_left(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t bit7 = READ_BIT(registers.a, 7);
+	registers.a = ((registers.a << 1) | READ_MASK(registers.f, FLAG_CARRY));
+	
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_accumulator_right(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t bit0 = READ_BIT(registers.a, 0);
+	registers.a = ((registers.a >> 1) | (READ_MASK(registers.f, FLAG_CARRY) << 7));
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_accumulator_left_circular(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t bit7 = READ_BIT(registers.a, 7);
+	registers.a = ((registers.a << 1) | bit7);
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t bit0 = READ_BIT(registers.a, 0);
+	registers.a = ((registers.a >> 1) | (bit0 << 7));
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+
+void CPU::swap(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	*value = (*value << 4) | (*value >> 4);
+
+	SetFlag(FLAG_ZERO, *value == 0);
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, false);
+	SetFlag(FLAG_CARRY, false);
 }

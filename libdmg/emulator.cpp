@@ -64,35 +64,41 @@ void Emulator::PrintDisassembly(uint16_t instructionCount) const
 	uint16_t address = registers.pc;
 
 	char disassemblyBuffer[256];
+	bool prefixNextInstruction = false;
 	
 	Debug::Print("Disassembly:\n");
 
 	for (uint16_t instructionIdx = 0; instructionIdx < instructionCount; ++instructionIdx)
 	{
 		uint8_t opcode = memory.ReadByte(address);
-		const CPU::Instruction& instruction = CPU::INSTRUCTION_MAP[opcode];
-		
-		switch (instruction.length)
+		const CPU::Instruction& instruction = prefixNextInstruction ? CPU::PREFIXED_INSTRUCTION_MAP[opcode] : CPU::INSTRUCTION_MAP[opcode];
+		prefixNextInstruction = false;
+
+		if (opcode != 0xCB)
 		{
-			case 1:
-				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
-				break;
+			switch (instruction.length)
+			{
+				case 1:
+					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
+					break;
 
-			case 2:
-				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadByte(address + 1));
-				break;
+				case 2:
+					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadByte(address + 1));
+					break;
 
-			case 3:
-				sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 2));
-				break;
+				case 3:
+					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 2));
+					break;
 
-			default:
-				assert(false && "Not implemented");
-				break;
+				default:
+					assert(false && "Not implemented");
+					break;
+			}
+
+			Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
 		}
-
-
-		Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
+		else
+			prefixNextInstruction = true;
 
 		address += instruction.length;
 	}

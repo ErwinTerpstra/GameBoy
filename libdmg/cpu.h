@@ -71,6 +71,7 @@ namespace libdmg
 		};
 
 		static const Instruction INSTRUCTION_MAP[256];
+		static const Instruction PREFIXED_INSTRUCTION_MAP[256];
 	
 	private:
 		static const uint16_t INTERRUPT_VECTORS[];
@@ -83,7 +84,8 @@ namespace libdmg
 
 		uint64_t ticks;
 
-		bool ime;
+		bool interruptMasterEnable;
+		bool prefixNextInstruction;
 
 		uint8_t* interruptFlagRegister;
 		uint8_t* interruptEnableRegister;
@@ -106,14 +108,19 @@ namespace libdmg
 
 		DMG_INLINE bool CPU::GetFlag(Flags flag) { return READ_MASK(registers.f, flag); }
 
+		/* Stack utilities*/
 		uint8_t ReadStackByte();
 		uint16_t ReadStackShort();
 
 		void WriteStackByte(uint8_t value);
 		void WriteStackShort(uint16_t value);
 
+		/* Memory read/writing */
 		uint8_t ReadSourceValue(uint8_t opcode, const uint8_t* operands) const;
+		uint8_t* GetSourcePointer(uint8_t opcode);
 		
+		/* ALU utilities */
+
 		/* CPU control */
 		void nop(uint8_t opcode, const uint8_t* operands) { }
 		void enable_interupts(uint8_t opcode, const uint8_t* operands);
@@ -129,6 +136,8 @@ namespace libdmg
 		void return_default(uint8_t opcode, const uint8_t* operands);
 		void return_conditional(uint8_t opcode, const uint8_t* operands);
 		void return_enable_interrupts(uint8_t opcode, const uint8_t* operands);
+
+		void prefix_cb(uint8_t opcode, const uint8_t* operands);
 
 		/* 8-bit ALU */
 		void alu_add(uint8_t opcode, const uint8_t* operands);
@@ -149,6 +158,7 @@ namespace libdmg
 		/* 16-bit alu */
 		void alu_inc_16bit(uint8_t opcode, const uint8_t* operands);
 		void alu_dec_16bit(uint8_t opcode, const uint8_t* operands);
+		void alu_add_hl_16bit(uint8_t opcode, const uint8_t* operands);
 
 		/* 8-bit loads */
 		void load_constant(uint8_t opcode, const uint8_t* operands);
@@ -167,6 +177,17 @@ namespace libdmg
 		void load_sp_to_memory(uint8_t opcode, const uint8_t* operands);
 		void load_accumulator_to_memory_16bit(uint8_t opcode, const uint8_t* operands);
 		void load_memory_to_accumulator_16bit(uint8_t opcode, const uint8_t* operands);
+		void push_stack_16bit(uint8_t opcode, const uint8_t* operands);
+		void pop_stack_16bit(uint8_t opcode, const uint8_t* operands);
+
+		/* Rotate & shift */
+		void rotate_accumulator_left(uint8_t opcode, const uint8_t* operands);
+		void rotate_accumulator_right(uint8_t opcode, const uint8_t* operands);
+		void rotate_accumulator_left_circular(uint8_t opcode, const uint8_t* operands);
+		void rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* operands);
+
+		/* Prefixed instructions */
+		void swap(uint8_t opcode, const uint8_t* operands);
 	};
 }
 

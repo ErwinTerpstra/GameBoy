@@ -104,7 +104,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		else
 		{
 			for (uint32_t step = 0; step < (1 << 16); ++step)
+			{
 				emulator.Step();
+
+				const CPU::Registers& registers = cpu.GetRegisters();
+				if (registers.pc == 0x0312)
+				{
+					paused = true;
+					Debug::Print("[WinBoy]: Breakpoint hit\n");
+					break;
+				}
+			}
 		}
 
 		Sleep(1);
