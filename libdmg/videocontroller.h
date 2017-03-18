@@ -11,6 +11,15 @@ namespace libdmg
 	class VideoController
 	{
 
+	public:
+		enum Mode
+		{
+			MODE_HBLANK = 0,
+			MODE_VBLANK = 1,
+			MODE_SEARCHING_OAM = 2,
+			MODE_TRANSFERRING_DATA = 3
+		};
+
 	private:
 		enum LCDCFlags
 		{
@@ -33,14 +42,6 @@ namespace libdmg
 			STAT_LYC_INTERRUPT = 6,
 		};
 
-		enum Mode
-		{
-			MODE_HBLANK = 0,
-			MODE_VBLANK = 1,
-			MODE_SEARCHING_OAM = 2,
-			MODE_TRANSFERRING_DATA = 3
-		};
-
 		CPU& cpu;
 		Memory& memory;
 
@@ -58,11 +59,14 @@ namespace libdmg
 		VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
 		void Sync();
+
+		Mode CurrentMode() const { return currentMode; }
 	private:
 		void Step();
 
-		void SwitchMode(Mode mode);
+		void DrawLine();
 
+		void SwitchMode(Mode mode);
 		void SetScanline(uint8_t scanline);
 	};
 }

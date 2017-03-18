@@ -127,6 +127,8 @@ namespace libdmg
 		void disable_interrupts(uint8_t opcode, const uint8_t* operands);
 
 		void jump(uint8_t opcode, const uint8_t* operands);
+		void jump_conditional(uint8_t opcode, const uint8_t* operands);
+		void jump_to_hl(uint8_t opcode, const uint8_t* operands);
 		void jump_to_offset(uint8_t opcode, const uint8_t* operands);
 		void jump_to_offset_conditional(uint8_t opcode, const uint8_t* operands);
 
@@ -150,8 +152,9 @@ namespace libdmg
 		void alu_cmp(uint8_t opcode, const uint8_t* operands);
 		void alu_inc(uint8_t opcode, const uint8_t* operands);
 		void alu_dec(uint8_t opcode, const uint8_t* operands);
-		void alu_swap(uint8_t opcode, const uint8_t* operands);
 		void alu_complement(uint8_t opcode, const uint8_t* operands);
+		void alu_complement_carry(uint8_t opcode, const uint8_t* operands);
+		void alu_set_carry(uint8_t opcode, const uint8_t* operands);
 
 		void encode_bcd(uint8_t opcode, const uint8_t* operands);
 
@@ -188,6 +191,8 @@ namespace libdmg
 
 		/* Prefixed instructions */
 		void swap(uint8_t opcode, const uint8_t* operands);
+		void reset_bit(uint8_t opcode, const uint8_t* operands);
+		void set_bit(uint8_t opcode, const uint8_t* operands);
 	};
 }
 

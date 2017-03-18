@@ -13,7 +13,7 @@ namespace WinBoy
 			struct
 			{
 				float r, g, b, a;
-			} channels;
+			};
 		};
 
 		float& operator[](const int index)

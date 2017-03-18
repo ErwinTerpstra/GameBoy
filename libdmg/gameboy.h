@@ -4,8 +4,12 @@
 #define GB_SCREEN_WIDTH				160
 #define GB_SCREEN_HEIGHT			144
 
-#define GB_VIDEO_BUFFER_WIDTH		256
-#define GB_VIDEO_BUFFER_HEIGHT		256
+#define GB_BG_WIDTH					256
+#define GB_BG_HEIGHT				256
+
+#define GB_BG_TILE_WIDTH			8
+#define GB_BG_TILE_HEIGHT			8
+#define GB_BG_TILE_SIZE				GB_BG_TILE_WIDTH * GB_BG_TILE_HEIGHT / 4
 
 #define GB_MAX_CARTRIDGE_SIZE		8 * 1024 * 1024
 #define GB_MAIN_MEM_SIZE			64 * 1024
@@ -19,9 +23,16 @@
 
 #define GB_ISR_DURATION				5
 
+#define GB_BG_MAP_0			0x9800
+#define GB_BG_MAP_1			0x9C00
+#define GB_TILE_DATA_0		0x8800
+#define GB_TILE_DATA_1		0x8000
+
 #define GB_OAM				0xFE00
 #define GB_IO_REGISTERS		0xFF00
 #define GB_HIMEM			0xFF80
+
+#define GB_REG_JOYP			0xFF00			// Joypad
 
 #define GB_REG_DIV			0xFF04			// Fixed divider timer
 #define GB_REG_TIMA			0xFF05			// Timer counter

@@ -9,7 +9,6 @@ using namespace libdmg;
 
 Memory::Memory(uint8_t* buffer) : buffer(buffer)
 {
-	WriteByte(0xFFFFF, (uint8_t) 0);
 
 }
 

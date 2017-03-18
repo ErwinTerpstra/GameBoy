@@ -30,6 +30,7 @@ void CPU::Reset()
 	registers.pc = 0x0100;
 
 	uint8_t* buffer = memory.RetrievePointer(0);
+	buffer[0xFF00] = 0x0F; // JOYP
 	buffer[0xFF05] = 0x00; // TIMA
 	buffer[0xFF06] = 0x00; // TMA
 	buffer[0xFF07] = 0x00; // TAC
@@ -94,20 +95,32 @@ void CPU::ExecuteNextInstruction()
 
 	// Increase the clock cycle count
 	ticks += instruction.duration;
+
+	// Test for interrupts
+	if (interruptMasterEnable)
+	{
+		for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
+		{
+			if (TestInterrupt((Interrupt)interrupt))
+				break;
+		}
+	}
+
 }
 
 void CPU::RequestInterrupt(Interrupt interrupt)
 {
 	// Set the flag in the IF register
 	*interruptFlagRegister |= (1 << interrupt);
-
-	TestInterrupt(interrupt);
 }
 
 bool CPU::TestInterrupt(Interrupt interrupt)
 {
-	// If the interrupt master enable flag is set, execute the interrupt
-	if (interruptMasterEnable && (*interruptEnableRegister & (1 << interrupt)))
+	// To execute an interrupt, the following conditions have to be met:
+	// 1) The interrupt master enable flag must be set
+	// 2) The interrupt must be enabled in the IE register
+	// 3) The interrupt must be requested in the IF register
+	if (interruptMasterEnable && (*interruptEnableRegister & *interruptFlagRegister & (1 << interrupt)))
 	{
 		ExecuteInterrupt(interrupt);
 		return true;
@@ -196,12 +209,6 @@ uint8_t* CPU::GetSourcePointer(uint8_t opcode)
 void CPU::enable_interupts(uint8_t opcode, const uint8_t* operands)
 {
 	interruptMasterEnable = true;
-
-	for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
-	{
-		if (TestInterrupt((Interrupt) interrupt))
-			break;
-	}
 }
 
 void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
@@ -212,6 +219,29 @@ void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
 void CPU::jump(uint8_t opcode, const uint8_t* operands)
 {
 	registers.pc = DECODE_SHORT(operands);
+}
+
+void CPU::jump_conditional(uint8_t opcode, const uint8_t* operands)
+{
+	bool conditional;
+
+	switch (opcode)
+	{
+		case 0xC2: conditional = !GetFlag(FLAG_ZERO); break;
+		case 0xCA: conditional = GetFlag(FLAG_ZERO); break;
+		case 0xD2: conditional = !GetFlag(FLAG_CARRY); break;
+		case 0xDA: conditional = GetFlag(FLAG_CARRY); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+
+	if (conditional)
+		registers.pc = DECODE_SHORT(operands);
+}
+
+void CPU::jump_to_hl(uint8_t opcode, const uint8_t* operands)
+{
+	registers.pc = registers.hl;
 }
 
 void CPU::jump_to_offset(uint8_t opcode, const uint8_t* operands)
@@ -245,7 +275,7 @@ void CPU::call(uint8_t opcode, const uint8_t* operands)
 
 void CPU::restart(uint8_t opcode, const uint8_t* operands)
 {
-	assert(opcode > 0xC0 && opcode <= 0xFF && (opcode % 7 == 0 || opcode % 15 == 0));
+	assert(opcode > 0xC0 && opcode <= 0xFF && (opcode % 16 == 7 || opcode % 16 == 15));
 
 	WriteStackShort(registers.pc);
 	registers.pc = opcode - 0xC7;
@@ -365,7 +395,7 @@ void CPU::alu_and(uint8_t opcode, const uint8_t* operands)
 void CPU::alu_or(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
-	registers.a = registers.a & value;
+	registers.a = registers.a | value;
 
 	SetFlag(FLAG_ZERO, registers.a == 0);
 	SetFlag(FLAG_SUBTRACT, false);
@@ -377,7 +407,7 @@ void CPU::alu_xor(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
 
-	registers.a = registers.a & value;
+	registers.a = registers.a ^ value;
 
 	SetFlag(FLAG_ZERO, registers.a == 0);
 	SetFlag(FLAG_SUBTRACT, false);
@@ -445,6 +475,28 @@ void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 	SetFlag(FLAG_ZERO, *target == 0);
 	SetFlag(FLAG_SUBTRACT, true);
 	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
+}
+
+void CPU::alu_complement(uint8_t opcode, const uint8_t* operands)
+{
+	registers.a = ~registers.a;
+
+	SetFlag(FLAG_SUBTRACT, true);
+	SetFlag(FLAG_HALF_CARRY, true);
+}
+
+void CPU::alu_complement_carry(uint8_t opcode, const uint8_t* operands)
+{
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, false);
+	SetFlag(FLAG_CARRY, !GetFlag(FLAG_CARRY));
+}
+
+void CPU::alu_set_carry(uint8_t opcode, const uint8_t* operands)
+{
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, false);
+	SetFlag(FLAG_CARRY, true);
 }
 
 void CPU::alu_inc_16bit(uint8_t opcode, const uint8_t* operands)
@@ -700,4 +752,20 @@ void CPU::swap(uint8_t opcode, const uint8_t* operands)
 	SetFlag(FLAG_SUBTRACT, false);
 	SetFlag(FLAG_HALF_CARRY, false);
 	SetFlag(FLAG_CARRY, false);
+}
+
+void CPU::reset_bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+
+	uint8_t bit = (opcode - 0x80) / 8;
+	*value = UNSET_BIT(*value, bit);
+}
+
+void CPU::set_bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+
+	uint8_t bit = (opcode - 0xC0) / 8;
+	*value = SET_BIT(*value, bit);
 }

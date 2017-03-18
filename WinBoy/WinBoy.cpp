@@ -8,6 +8,7 @@
 #include "Window/window.h"
 #include "Window/buffer.h"
 #include "Window/gdibufferallocator.h"
+#include "Window/color.h"
 
 #include "inputmanager.h"
 
@@ -16,6 +17,14 @@
 
 using namespace libdmg;
 using namespace WinBoy;
+
+const Color COLORS[] = 
+{
+	{ 1.0f, 1.0f, 1.0f, 1.0f },
+	{ 0.6f, 0.6f, 0.6f, 1.0f },
+	{ 0.3f, 0.3f, 0.3f, 1.0f },
+	{ 0.0f, 0.0f, 0.0f, 1.0f },
+};
 
 int main()
 {
@@ -26,11 +35,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	uint8_t* romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
 	uint8_t* memoryBuffer = new uint8_t[GB_MAIN_MEM_SIZE];
-	uint8_t* videoBuffer = new uint8_t[GB_VIDEO_BUFFER_WIDTH * GB_VIDEO_BUFFER_HEIGHT];
+
+	uint16_t videoBufferSize = GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4;
+	uint8_t* videoBuffer = new uint8_t[videoBufferSize];
 
 	memset(romBuffer, 0, GB_MAX_CARTRIDGE_SIZE);
 	memset(memoryBuffer, 0, GB_MAIN_MEM_SIZE);
-	memset(videoBuffer, 0, GB_VIDEO_BUFFER_WIDTH * GB_VIDEO_BUFFER_HEIGHT);
+	memset(videoBuffer, 0, videoBufferSize);
 
 	FILE* handle;
 	errno_t error = fopen_s(&handle, ROM_FILE, "rb");
@@ -69,6 +80,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	bool paused = false;
 	bool step = false;
 
+	VideoController::Mode prevVideoControllerMode = videoController.CurrentMode();
+
+	uint16_t breakpoints[] =
+	{
+		0x0040,
+	};
+
 	while (true)
 	{
 		if (inputManager.GetKeyDown('B'))
@@ -103,24 +121,49 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		else
 		{
-			for (uint32_t step = 0; step < (1 << 16); ++step)
+			for (uint32_t step = 0; step < (1 << 16) && !paused; ++step)
 			{
 				emulator.Step();
 
 				const CPU::Registers& registers = cpu.GetRegisters();
-				if (registers.pc == 0x0312)
+				//if (registers.pc == 0x0040)
+				//if (registers.pc == 0x2882)
+				//if (registers.pc == 0xFFB6)
+				//if (FALSE)
+				for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(breakpoints) / sizeof(uint16_t); ++breakpointIdx)
 				{
-					paused = true;
-					Debug::Print("[WinBoy]: Breakpoint hit\n");
-					break;
+					if (registers.pc == breakpoints[breakpointIdx])
+					{
+						paused = true;
+						Debug::Print("[WinBoy]: Breakpoint hit at 0x%04X\n", registers.pc);
+					}
 				}
 			}
 		}
 
-		Sleep(1);
+		if (videoController.CurrentMode() == VideoController::MODE_VBLANK && prevVideoControllerMode != VideoController::MODE_VBLANK)
+		{
+			for (uint8_t y = 0; y < GB_SCREEN_HEIGHT; ++y)
+			{
+				for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
+				{
+					uint16_t pixel = (y * GB_SCREEN_WIDTH) + x;
+					uint8_t videoByte = videoBuffer[pixel / 4];
+					uint8_t videoBit = (pixel % 4) << 1;
+					uint8_t color = (videoByte >> videoBit) & 0x03;
 
-		window.DrawBuffer(frameBuffer, bufferAllocator);
+					frameBuffer.SetPixel(x, y, COLORS[color]);
+				}
+			}
+
+			window.DrawBuffer(frameBuffer, bufferAllocator);
+		}
+
+		prevVideoControllerMode = videoController.CurrentMode();
+
 		window.ProcessMessages();
+
+		Sleep(10);
 	}
 
 	delete[] romBuffer;
