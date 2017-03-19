@@ -14,11 +14,12 @@
 
 #define ROM_FILE "../roms/Tetris (World).gb"
 #define DISASSEMBLY_LENGTH 10
+#define SCALE_FACTOR 2
 
 using namespace libdmg;
 using namespace WinBoy;
 
-const Color COLORS[] = 
+const Color COLORS[] =
 {
 	{ 1.0f, 1.0f, 1.0f, 1.0f },
 	{ 0.6f, 0.6f, 0.6f, 1.0f },
@@ -26,18 +27,95 @@ const Color COLORS[] =
 	{ 0.0f, 0.0f, 0.0f, 1.0f },
 };
 
+uint16_t breakpoints[] =
+{
+	0x0000,
+	//0x034C,
+	//0x029C,
+	//0x030F,
+	//0x2A08
+};
+
+uint16_t memoryBreakpoints[] =
+{
+	0x0000,
+	//0xFF80,
+};
+
+bool paused = false;
+
+uint8_t* romBuffer;
+uint8_t* memoryBuffer;
+
+uint16_t videoBufferSize;
+uint8_t* videoBuffer;
+
+Memory* memory;
+CPU* cpu;
+Cartridge* cartridge;
+VideoController* videoController;
+
+Emulator* emulator;
+
+Window* window;
+
+GDIBufferAllocator* bufferAllocator;
+Buffer* frameBuffer;
+
 int main()
 {
 	return WinMain(GetModuleHandle(NULL), NULL, GetCommandLine(), SW_SHOW);
 }
 
+void DrawFrameBuffer();
+
+void MemoryWriteCallback(uint16_t address)
+{
+	const CPU::Registers& registers = cpu->GetRegisters();
+
+	for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(memoryBreakpoints) / sizeof(uint16_t); ++breakpointIdx)
+	{
+		if (address == memoryBreakpoints[breakpointIdx])
+		{
+			Debug::Print("[WinBoy]: Memory breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
+			paused = true;
+			break;
+		}
+	}
+}
+void VBlankCallback()
+{
+	DrawFrameBuffer();
+}
+
+void DrawFrameBuffer()
+{
+	for (uint16_t y = 0; y < GB_SCREEN_HEIGHT; ++y)
+	{
+		for (uint16_t x = 0; x < GB_SCREEN_WIDTH; ++x)
+		{
+			uint16_t pixel = ((GB_SCREEN_HEIGHT - 1 - y) * GB_SCREEN_WIDTH) + x;
+			uint8_t videoByte = videoBuffer[pixel / 4];
+			uint8_t videoBit = (pixel % 4) << 1;
+			uint8_t color = (videoByte >> videoBit) & 0x03;
+
+			for (uint8_t yy = 0; yy < SCALE_FACTOR; ++yy)
+				for (uint8_t xx = 0; xx < SCALE_FACTOR; ++xx)
+					frameBuffer->SetPixel(x * SCALE_FACTOR + xx, y * SCALE_FACTOR + yy, COLORS[color]);
+
+		}
+	}
+
+	window->DrawBuffer(*frameBuffer, *bufferAllocator);
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	uint8_t* romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
-	uint8_t* memoryBuffer = new uint8_t[GB_MAIN_MEM_SIZE];
+	romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
+	memoryBuffer = new uint8_t[GB_MAIN_MEM_SIZE];
 
-	uint16_t videoBufferSize = GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4;
-	uint8_t* videoBuffer = new uint8_t[videoBufferSize];
+	videoBufferSize = GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4;
+	videoBuffer = new uint8_t[videoBufferSize];
 
 	memset(romBuffer, 0, GB_MAX_CARTRIDGE_SIZE);
 	memset(memoryBuffer, 0, GB_MAIN_MEM_SIZE);
@@ -57,35 +135,40 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	fclose(handle);
 
 	Debug::Print("[WinBoy]: Rom file read with %u bytes.\n", romSize);
-	
-	Memory memory(memoryBuffer);
-	CPU cpu(memory);
-	Cartridge cartridge(romBuffer);
-	VideoController videoController(cpu, memory, videoBuffer);
 
-	Emulator emulator(cpu, memory, cartridge, videoController);
-	emulator.Boot();
+	memory = new Memory(memoryBuffer);
+	cpu = new CPU(*memory);
+	cartridge = new Cartridge(romBuffer);
+	videoController = new VideoController(*cpu, *memory, videoBuffer);
+
+	memory->MemoryWriteCallback = MemoryWriteCallback;
+	videoController->VBlankCallback = VBlankCallback;
+
+	emulator = new Emulator(*cpu, *memory, *cartridge, *videoController);
+	emulator->Boot();
 
 	InputManager& inputManager = InputManager::Instance();
 
-	Window window(hInstance, "WinBoyWindow");
-	window.Create("WinBoy", GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT);
+	window = new Window(hInstance, "WinBoyWindow");
+	window->Create("WinBoy", GB_SCREEN_WIDTH * SCALE_FACTOR, GB_SCREEN_HEIGHT * SCALE_FACTOR);
 
-	GDIBufferAllocator bufferAllocator(window.handle);
-	Buffer frameBuffer(&bufferAllocator);
-	frameBuffer.Allocate(GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, Buffer::BGR24);
+	bufferAllocator = new GDIBufferAllocator(window->handle);
 
-	window.Show(nCmdShow);
+	frameBuffer = new Buffer(bufferAllocator);
+	frameBuffer->Allocate(GB_SCREEN_WIDTH * SCALE_FACTOR, GB_SCREEN_HEIGHT * SCALE_FACTOR, Buffer::BGR24);
 
-	bool paused = false;
-	bool step = false;
+	window->Show(nCmdShow);
 
-	VideoController::Mode prevVideoControllerMode = videoController.CurrentMode();
+	VideoController::Mode prevVideoControllerMode = videoController->CurrentMode();
+	
+	LARGE_INTEGER timerFrequency;
+	QueryPerformanceFrequency(&timerFrequency);
+	const double secondsPerTick = 1.0 / timerFrequency.QuadPart;
 
-	uint16_t breakpoints[] =
-	{
-		0x0040,
-	};
+	LARGE_INTEGER previousFrameTicks;
+	QueryPerformanceCounter(&previousFrameTicks);
+
+	double realTime = 0.0;
 
 	while (true)
 	{
@@ -93,8 +176,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 			paused = true;
 			Debug::Print("[WinBoy]: Execution paused.\n");
-			emulator.PrintDisassembly(DISASSEMBLY_LENGTH);
-			emulator.PrintRegisters();
+			emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
+			emulator->PrintRegisters();
 		}
 
 		if (paused)
@@ -108,67 +191,78 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			if (inputManager.GetKeyDown('S'))
 			{
 				Debug::Print("[WinBoy]: Executing next instruction...\n");
-				emulator.Step();
-				emulator.PrintDisassembly(DISASSEMBLY_LENGTH);
-				emulator.PrintRegisters();
+				emulator->Step();
+				emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
+				emulator->PrintRegisters();
 			}
 
 			if (inputManager.GetKeyDown('P'))
 			{
-				emulator.PrintDisassembly(DISASSEMBLY_LENGTH);
-				emulator.PrintRegisters();
+				emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
+				emulator->PrintRegisters();
 			}
+
+			if (inputManager.GetKeyDown('V'))
+			{
+				for (uint16_t address = GB_TILE_DATA_0; address < GB_TILE_DATA_1; ++address)
+				{
+					uint8_t byte = memory->ReadByte(address);
+					Debug::Print("0x%02X ", byte);
+
+					if (address % 16 == 15)
+						Debug::Print("\n");
+				}
+			}
+
+			if (inputManager.GetKeyDown('T'))
+			{
+				Debug::Print("[WinBoy]: Drawing tileset to framebuffer... ");
+
+				videoController->DrawTileset();
+				DrawFrameBuffer();
+
+				Debug::Print("done\n");
+			}
+
+			QueryPerformanceCounter(&previousFrameTicks);
 		}
 		else
 		{
-			for (uint32_t step = 0; step < (1 << 16) && !paused; ++step)
+			double cpuTime;
+			LARGE_INTEGER currentTicks;
+			QueryPerformanceCounter(&currentTicks);
+			realTime += (currentTicks.QuadPart - previousFrameTicks.QuadPart) * secondsPerTick;
+			previousFrameTicks = currentTicks;
+			
+			do
 			{
-				emulator.Step();
+				emulator->Step();
+				
+				// Calculate the time since boot for the CPU
+				cpuTime = cpu->Ticks() / (double) GB_CLOCK_FREQUENCY;
 
-				const CPU::Registers& registers = cpu.GetRegisters();
-				//if (registers.pc == 0x0040)
-				//if (registers.pc == 0x2882)
-				//if (registers.pc == 0xFFB6)
-				//if (FALSE)
+				// Test for PC breakpoints
+				const CPU::Registers& registers = cpu->GetRegisters();
 				for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(breakpoints) / sizeof(uint16_t); ++breakpointIdx)
 				{
 					if (registers.pc == breakpoints[breakpointIdx])
 					{
-						paused = true;
 						Debug::Print("[WinBoy]: Breakpoint hit at 0x%04X\n", registers.pc);
+						paused = true;
+						break;
 					}
 				}
-			}
+
+			} while (cpuTime < realTime && !paused);
 		}
 
-		if (videoController.CurrentMode() == VideoController::MODE_VBLANK && prevVideoControllerMode != VideoController::MODE_VBLANK)
-		{
-			for (uint8_t y = 0; y < GB_SCREEN_HEIGHT; ++y)
-			{
-				for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
-				{
-					uint16_t pixel = (y * GB_SCREEN_WIDTH) + x;
-					uint8_t videoByte = videoBuffer[pixel / 4];
-					uint8_t videoBit = (pixel % 4) << 1;
-					uint8_t color = (videoByte >> videoBit) & 0x03;
-
-					frameBuffer.SetPixel(x, y, COLORS[color]);
-				}
-			}
-
-			window.DrawBuffer(frameBuffer, bufferAllocator);
-		}
-
-		prevVideoControllerMode = videoController.CurrentMode();
-
-		window.ProcessMessages();
-
-		Sleep(10);
+		window->ProcessMessages();
+		Sleep(1);
 	}
 
 	delete[] romBuffer;
 	delete[] memoryBuffer;
 
-    return 0;
+	return 0;
 }
 

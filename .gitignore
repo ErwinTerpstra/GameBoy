@@ -8,3 +8,5 @@ libdmg/x64/
 WinBoy/x64/
 *.opendb
 *.db
+WinBoy/Release/
+libdmg/Release/

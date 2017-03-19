@@ -7,7 +7,7 @@
 
 using namespace libdmg;
 
-Memory::Memory(uint8_t* buffer) : buffer(buffer)
+Memory::Memory(uint8_t* buffer) : buffer(buffer), MemoryWriteCallback(NULL)
 {
 
 }
@@ -24,6 +24,9 @@ const uint8_t* Memory::RetrievePointer(uint16_t address) const
 
 void Memory::WriteByte(uint16_t address, uint8_t value)
 {
+	if (address == GB_REG_JOYP)
+		value |= 0x0F;
+
 	if (address == GB_REG_DMA)
 	{
 		uint16_t source = value * 100;
@@ -34,10 +37,20 @@ void Memory::WriteByte(uint16_t address, uint8_t value)
 	}
 
 	buffer[address] = value;
+
+	if (MemoryWriteCallback != NULL)
+		MemoryWriteCallback(address);
+
 }
 
 void Memory::WriteShort(uint16_t address, uint16_t value)
 {
+	if (MemoryWriteCallback != NULL)
+	{
+		MemoryWriteCallback(address);
+		MemoryWriteCallback(address + 1);
+	}
+
 	buffer[address] = value & 0x00ff;
 	buffer[address + 1] = (value >> 8) & 0x0ff;
 }

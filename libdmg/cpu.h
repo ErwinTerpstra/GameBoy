@@ -56,6 +56,7 @@ namespace libdmg
 
 		struct Instruction
 		{
+			uint8_t opcode;
 			char* disassemblyFormat;
 			uint8_t length;
 			uint8_t duration;
@@ -101,6 +102,8 @@ namespace libdmg
 		void ExecuteInterrupt(Interrupt interrupt);
 
 		const uint64_t& Ticks() const { return ticks; }
+		bool InterruptMasterEnable() const { return interruptMasterEnable; }
+
 		const Registers& GetRegisters() const { return registers; }
 	private:
 
@@ -190,7 +193,11 @@ namespace libdmg
 		void rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* operands);
 
 		/* Prefixed instructions */
+		void shift_left_arithmetically(uint8_t opcode, const uint8_t* operands);
+		void shift_right_arithmetically(uint8_t opcode, const uint8_t* operands);
+		void shift_right_logically(uint8_t opcode, const uint8_t* operands);
 		void swap(uint8_t opcode, const uint8_t* operands);
+		void test_bit(uint8_t opcode, const uint8_t* operands);
 		void reset_bit(uint8_t opcode, const uint8_t* operands);
 		void set_bit(uint8_t opcode, const uint8_t* operands);
 	};

@@ -5,12 +5,15 @@
 #include "cartridge.h"
 #include "videocontroller.h"
 
+#include "gameboy.h"
+
 #include "debug.h"
 
 using namespace libdmg;
 
 Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, VideoController& videoController) : 
-	cpu(cpu), memory(memory), cartridge(cartridge), videoController(videoController)
+	cpu(cpu), memory(memory), cartridge(cartridge), videoController(videoController),
+	historyIdx(0), historyLength(0)
 {
 
 }
@@ -32,6 +35,12 @@ void Emulator::Boot()
 
 void Emulator::Step()
 {
+	// Save the PC in the instruction history
+	const CPU::Registers& registers = cpu.GetRegisters();
+	historyIdx = historyIdx < MAX_HISTORY_LENGTH - 1 ? historyIdx + 1 : 0;
+	historyLength = std::min(historyLength + 1U, (unsigned int)MAX_HISTORY_LENGTH);
+	executionHistory[historyIdx] = registers.pc;
+
 	cpu.ExecuteNextInstruction();
 	videoController.Sync();
 }
@@ -54,6 +63,7 @@ void Emulator::PrintRegisters() const
 		READ_MASK(registers.f, CPU::FLAG_CARRY));
 
 	Debug::Print("pc: 0x%04X; sp: 0x%04X\n", registers.pc, registers.sp);
+	Debug::Print("ime: %d, if: 0x%02X; ie: 0x%02X\n", cpu.InterruptMasterEnable() ? 1 : 0, memory.ReadByte(GB_REG_IF), memory.ReadByte(GB_REG_IE));
 	Debug::Print("\n");
 }
 
@@ -61,47 +71,59 @@ void Emulator::PrintDisassembly(uint16_t instructionCount) const
 {
 	const CPU::Registers& registers = cpu.GetRegisters();
 
-	uint16_t address = registers.pc;
-
-	char disassemblyBuffer[256];
 	bool prefixNextInstruction = false;
 	
 	Debug::Print("Disassembly:\n");
 
+	for (uint16_t historyEntryIdx = historyLength; historyEntryIdx > 0; --historyEntryIdx)
+	{
+		uint16_t historyIdx = (MAX_HISTORY_LENGTH + this->historyIdx - historyEntryIdx + 1) % MAX_HISTORY_LENGTH;
+
+		const CPU::Instruction& instruction = PrintInstruction(executionHistory[historyIdx], prefixNextInstruction);
+		prefixNextInstruction = instruction.opcode == 0xCB;
+	}
+
+	Debug::Print("===========>\n");
+
+	uint16_t address = registers.pc;
 	for (uint16_t instructionIdx = 0; instructionIdx < instructionCount; ++instructionIdx)
 	{
-		uint8_t opcode = memory.ReadByte(address);
-		const CPU::Instruction& instruction = prefixNextInstruction ? CPU::PREFIXED_INSTRUCTION_MAP[opcode] : CPU::INSTRUCTION_MAP[opcode];
-		prefixNextInstruction = false;
-
-		if (opcode != 0xCB)
-		{
-			switch (instruction.length)
-			{
-				case 1:
-					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
-					break;
-
-				case 2:
-					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadByte(address + 1));
-					break;
-
-				case 3:
-					sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 1));
-					break;
-
-				default:
-					assert(false && "Not implemented");
-					break;
-			}
-
-			Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
-		}
-		else
-			prefixNextInstruction = true;
-
+		const CPU::Instruction& instruction = PrintInstruction(address, prefixNextInstruction);
 		address += instruction.length;
+
+		prefixNextInstruction = instruction.opcode == 0xCB;
 	}
 	
 	Debug::Print("\n");
+}
+
+const CPU::Instruction& Emulator::PrintInstruction(uint16_t address, bool prefixed) const
+{
+	static char disassemblyBuffer[256];
+
+	uint8_t opcode = memory.ReadByte(address);
+	const CPU::Instruction& instruction = prefixed ? CPU::PREFIXED_INSTRUCTION_MAP[opcode] : CPU::INSTRUCTION_MAP[opcode];
+
+	switch (instruction.length)
+	{
+		case 1:
+			sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
+			break;
+
+		case 2:
+			sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadByte(address + 1));
+			break;
+
+		case 3:
+			sprintf_s(disassemblyBuffer, instruction.disassemblyFormat, memory.ReadShort(address + 1));
+			break;
+
+		default:
+			assert(false && "Not implemented");
+			break;
+	}
+
+	Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
+
+	return instruction;
 }

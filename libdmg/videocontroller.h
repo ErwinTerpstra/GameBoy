@@ -20,6 +20,8 @@ namespace libdmg
 			MODE_TRANSFERRING_DATA = 3
 		};
 
+		void(*VBlankCallback)();
+
 	private:
 		enum LCDCFlags
 		{
@@ -59,12 +61,16 @@ namespace libdmg
 		VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
 		void Sync();
+		void DrawTileset();
 
 		Mode CurrentMode() const { return currentMode; }
+		uint8_t Scanline() const { return scanline; }
 	private:
 		void Step();
 
 		void DrawLine();
+
+		void DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer);
 
 		void SwitchMode(Mode mode);
 		void SetScanline(uint8_t scanline);

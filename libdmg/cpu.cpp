@@ -742,16 +742,64 @@ void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* opera
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 }
 
+void CPU::shift_left_arithmetically(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(*value, 7);
+	*value = *value << 1;
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::shift_right_arithmetically(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(*value, 7);
+	uint8_t bit0 = READ_BIT(*value, 0);
+	*value = SET_BIT_IF(*value >> 1, 7, bit7);
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::shift_right_logically(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(*value, 0);
+	*value = *value >> 1;
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
 
 void CPU::swap(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t* value = GetSourcePointer(opcode);
 	*value = (*value << 4) | (*value >> 4);
 
-	SetFlag(FLAG_ZERO, *value == 0);
-	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, false);
-	SetFlag(FLAG_CARRY, false);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+	registers.f = UNSET_MASK(registers.f, FLAG_CARRY);
+}
+
+void CPU::test_bit(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+
+	uint8_t bit = (opcode - 0x40) / 8;
+	uint8_t result = READ_BIT(*value, bit);
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, result);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = SET_MASK(registers.f, FLAG_HALF_CARRY);
 }
 
 void CPU::reset_bit(uint8_t opcode, const uint8_t* operands)
