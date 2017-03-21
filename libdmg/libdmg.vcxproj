@@ -123,20 +123,22 @@
     <ClInclude Include="emulator.h" />
     <ClInclude Include="environment.h" />
     <ClInclude Include="gameboy.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="libdmg.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="videocontroller.h" />
+    <ClInclude Include="video.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="emulator.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="instructions.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="timer.cpp" />
-    <ClCompile Include="videocontroller.cpp" />
+    <ClCompile Include="video.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

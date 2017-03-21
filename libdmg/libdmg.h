@@ -8,7 +8,9 @@
 #include "cpu.h"
 #include "memory.h"
 #include "cartridge.h"
-#include "videocontroller.h"
+#include "video.h"
+#include "input.h"
+
 #include "emulator.h"
 
 #endif

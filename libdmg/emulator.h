@@ -9,7 +9,8 @@ namespace libdmg
 {
 	class Memory;
 	class Cartridge;
-	class VideoController;
+	class Video;
+	class Input;
 
 	class Emulator
 	{
@@ -17,7 +18,8 @@ namespace libdmg
 		CPU& cpu;
 		Memory& memory;
 		Cartridge& cartridge;
-		VideoController& videoController;
+		Video& video;
+		Input& input;
 
 	private:
 		static const uint8_t MAX_HISTORY_LENGTH = 10;
@@ -27,7 +29,7 @@ namespace libdmg
 		uint16_t historyLength;
 
 	public:
-		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, VideoController& videoController);
+		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input);
 		
 		void Boot();
 

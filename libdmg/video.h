@@ -8,7 +8,7 @@ namespace libdmg
 	class CPU;
 	class Memory;
 
-	class VideoController
+	class Video
 	{
 
 	public:
@@ -58,7 +58,7 @@ namespace libdmg
 		Mode currentMode;
 
 	public:
-		VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
+		Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
 		void Sync();
 		void DrawTileset();

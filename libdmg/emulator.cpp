@@ -3,7 +3,8 @@
 #include "cpu.h"
 #include "memory.h"
 #include "cartridge.h"
-#include "videocontroller.h"
+#include "video.h"
+#include "input.h"
 
 #include "gameboy.h"
 
@@ -11,8 +12,8 @@
 
 using namespace libdmg;
 
-Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, VideoController& videoController) : 
-	cpu(cpu), memory(memory), cartridge(cartridge), videoController(videoController),
+Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input) : 
+	cpu(cpu), memory(memory), cartridge(cartridge), video(video), input(input),
 	historyIdx(0), historyLength(0)
 {
 
@@ -42,7 +43,8 @@ void Emulator::Step()
 	executionHistory[historyIdx] = registers.pc;
 
 	cpu.ExecuteNextInstruction();
-	videoController.Sync();
+	video.Sync();
+	input.Update();
 }
 
 void Emulator::PrintRegisters() const

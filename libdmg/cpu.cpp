@@ -30,7 +30,7 @@ void CPU::Reset()
 	registers.pc = 0x0100;
 
 	uint8_t* buffer = memory.RetrievePointer(0);
-	buffer[0xFF00] = 0x0F; // JOYP
+	buffer[0xFF00] = 0xFF; // JOYP
 	buffer[0xFF05] = 0x00; // TIMA
 	buffer[0xFF06] = 0x00; // TMA
 	buffer[0xFF07] = 0x00; // TAC

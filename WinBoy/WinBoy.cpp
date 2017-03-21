@@ -53,7 +53,8 @@ uint8_t* videoBuffer;
 Memory* memory;
 CPU* cpu;
 Cartridge* cartridge;
-VideoController* videoController;
+Video* video;
+Input* input;
 
 Emulator* emulator;
 
@@ -139,12 +140,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	memory = new Memory(memoryBuffer);
 	cpu = new CPU(*memory);
 	cartridge = new Cartridge(romBuffer);
-	videoController = new VideoController(*cpu, *memory, videoBuffer);
+	video = new Video(*cpu, *memory, videoBuffer);
+	input = new Input(*cpu, *memory);
 
 	memory->MemoryWriteCallback = MemoryWriteCallback;
-	videoController->VBlankCallback = VBlankCallback;
+	video->VBlankCallback = VBlankCallback;
 
-	emulator = new Emulator(*cpu, *memory, *cartridge, *videoController);
+	emulator = new Emulator(*cpu, *memory, *cartridge, *video, *input);
 	emulator->Boot();
 
 	InputManager& inputManager = InputManager::Instance();
@@ -159,7 +161,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	window->Show(nCmdShow);
 
-	VideoController::Mode prevVideoControllerMode = videoController->CurrentMode();
+	Video::Mode prevVideoMode = video->CurrentMode();
 	
 	LARGE_INTEGER timerFrequency;
 	QueryPerformanceFrequency(&timerFrequency);
@@ -218,7 +220,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			{
 				Debug::Print("[WinBoy]: Drawing tileset to framebuffer... ");
 
-				videoController->DrawTileset();
+				video->DrawTileset();
 				DrawFrameBuffer();
 
 				Debug::Print("done\n");
@@ -257,6 +259,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		window->ProcessMessages();
+
+		input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('A'));
+		input->SetButtonState(Input::BUTTON_B, inputManager.GetKey('S'));
+		input->SetButtonState(Input::BUTTON_START, inputManager.GetKey(VK_RETURN));
+		input->SetButtonState(Input::BUTTON_SELECT, inputManager.GetKey(VK_BACK));
+
+		input->SetButtonState(Input::BUTTON_DPAD_DOWN, inputManager.GetKey(VK_DOWN));
+		input->SetButtonState(Input::BUTTON_DPAD_LEFT, inputManager.GetKey(VK_LEFT));
+		input->SetButtonState(Input::BUTTON_DPAD_RIGHT, inputManager.GetKey(VK_RIGHT));
+		input->SetButtonState(Input::BUTTON_DPAD_UP, inputManager.GetKey(VK_UP));
+
 		Sleep(1);
 	}
 

@@ -76,6 +76,8 @@ namespace libdmg
 	
 	private:
 		static const uint16_t INTERRUPT_VECTORS[];
+		
+		static const uint8_t GB_ISR_DURATION = 5;
 
 		Memory& memory;
 

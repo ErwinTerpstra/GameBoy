@@ -24,9 +24,6 @@ const uint8_t* Memory::RetrievePointer(uint16_t address) const
 
 void Memory::WriteByte(uint16_t address, uint8_t value)
 {
-	if (address == GB_REG_JOYP)
-		value |= 0x0F;
-
 	if (address == GB_REG_DMA)
 	{
 		uint16_t source = value * 100;

@@ -1,4 +1,4 @@
-#include "videocontroller.h"
+#include "video.h"
 
 #include "cpu.h"
 #include "memory.h"
@@ -10,7 +10,7 @@
 
 using namespace libdmg;
 
-VideoController::VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer) : 
+Video::Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer) : 
 	VBlankCallback(NULL),
 	cpu(cpu), memory(memory), videoBuffer(videoBuffer), 
 	scanline(0), ticks(0), modeTicks(0), currentMode(MODE_VBLANK)
@@ -19,7 +19,7 @@ VideoController::VideoController(CPU& cpu, Memory& memory, uint8_t* videoBuffer)
 	statRegister = memory.RetrievePointer(GB_REG_STAT);
 }
 
-void VideoController::Sync()
+void Video::Sync()
 {
 	const uint64_t& targetTicks = cpu.Ticks();
 	
@@ -27,7 +27,7 @@ void VideoController::Sync()
 		Step();
 }
 
-void VideoController::Step()
+void Video::Step()
 {
 	switch (currentMode)
 	{
@@ -77,7 +77,7 @@ void VideoController::Step()
 	++ticks;
 }
 
-void VideoController::DrawTileset()
+void Video::DrawTileset()
 {
 	uint16_t tileAddress = GB_TILE_DATA_0;
 	uint8_t tileBuffer[GB_TILE_SIZE];
@@ -100,7 +100,7 @@ void VideoController::DrawTileset()
 
 }
 
-void VideoController::DrawLine()
+void Video::DrawLine()
 {
 	uint16_t bgMapAddress = READ_BIT(*lcdControlRegister, LCDC_BG_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
 	uint16_t bgTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
@@ -156,7 +156,7 @@ void VideoController::DrawLine()
 	}
 }
 
-void VideoController::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
+void Video::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
 {
 	for (uint8_t tileY = 0; tileY < GB_TILE_HEIGHT; ++tileY)
 	{
@@ -184,7 +184,7 @@ void VideoController::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
 
 }
 
-void VideoController::SwitchMode(Mode mode)
+void Video::SwitchMode(Mode mode)
 {
 	currentMode = mode;
 	modeTicks = 0;
@@ -223,7 +223,7 @@ void VideoController::SwitchMode(Mode mode)
 	}
 }
 
-void VideoController::SetScanline(uint8_t scanline)
+void Video::SetScanline(uint8_t scanline)
 {
 	this->scanline = scanline;
 
