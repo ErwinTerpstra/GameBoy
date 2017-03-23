@@ -26,7 +26,7 @@ void Memory::WriteByte(uint16_t address, uint8_t value)
 {
 	if (address == GB_REG_DMA)
 	{
-		uint16_t source = value * 100;
+		uint16_t source = value << 8;
 		for (uint8_t offset = 0; offset < 0x9F; ++offset)
 			buffer[GB_OAM + offset] = buffer[source + offset];
 

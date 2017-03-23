@@ -23,6 +23,8 @@
 
 #define GB_MAX_SCANLINE				153
 
+#define GB_MAX_SPRITES				40
+
 #define GB_BG_MAP_0			0x9800
 #define GB_BG_MAP_1			0x9C00
 #define GB_TILE_DATA_0		0x8000

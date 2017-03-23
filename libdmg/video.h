@@ -23,6 +23,22 @@ namespace libdmg
 		void(*VBlankCallback)();
 
 	private:
+		struct Sprite
+		{
+			uint8_t y;
+			uint8_t x;
+			uint8_t tileIdx;
+			uint8_t flags;
+		};
+
+		enum SpriteFlags
+		{
+			SPRITE_PALETTE = 4,
+			SPRITE_FLIP_X = 5,
+			SPRITE_FLIP_Y = 6,
+			SPRITE_ORDER = 7,
+		};
+
 		enum LCDCFlags
 		{
 			LCDC_BG_ENABLE = 0,
@@ -69,6 +85,12 @@ namespace libdmg
 		void Step();
 
 		void DrawLine();
+
+		void DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palette, uint8_t scrollX, uint8_t scrollY);
+		void DrawSprites();
+
+		uint8_t GetPixel(uint8_t x, uint8_t y);
+		void SetPixel(uint8_t x, uint8_t y, uint8_t color);
 
 		void DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer);
 

@@ -18,12 +18,10 @@ void Input::Update()
 	if (!READ_BIT(*joypadRegister, BUTTONS_BIT))
 	{
 		*joypadRegister = ~((buttons >> 4) | (1 << BUTTONS_BIT));
-		printf("%02X\n", *joypadRegister);
 	}
 	else if (!READ_BIT(*joypadRegister, DPAD_BIT))
 	{
 		*joypadRegister = ~((buttons & 0x0F) | (1 << DPAD_BIT));
-		printf("%02X\n", *joypadRegister);
 	}
 	else
 		*joypadRegister = 0x3F;
