@@ -39,10 +39,13 @@ uint16_t breakpoints[] =
 uint16_t memoryBreakpoints[] =
 {
 	0x0000,
-	//0xFF80,
+	//0xFF80,	// Current joypad state
+	0xFF81, // Changed joypad bits
+	0xFFC5, // Changed joypad bits (copy)
 };
 
 bool paused = false;
+bool breakpointsEnabled = true;
 
 uint8_t* romBuffer;
 uint8_t* memoryBuffer;
@@ -70,20 +73,43 @@ int main()
 
 void DrawFrameBuffer();
 
-void MemoryWriteCallback(uint16_t address)
+
+void MemoryReadCallback(uint16_t address)
 {
+	if (!breakpointsEnabled)
+		return;
+
 	const CPU::Registers& registers = cpu->GetRegisters();
 
 	for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(memoryBreakpoints) / sizeof(uint16_t); ++breakpointIdx)
 	{
 		if (address == memoryBreakpoints[breakpointIdx])
 		{
-			Debug::Print("[WinBoy]: Memory breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
+			Debug::Print("[WinBoy]: Memory read breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
 			paused = true;
 			break;
 		}
 	}
 }
+
+void MemoryWriteCallback(uint16_t address)
+{
+	if (!breakpointsEnabled)
+		return;
+
+	const CPU::Registers& registers = cpu->GetRegisters();
+
+	for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(memoryBreakpoints) / sizeof(uint16_t); ++breakpointIdx)
+	{
+		if (address == memoryBreakpoints[breakpointIdx])
+		{
+			Debug::Print("[WinBoy]: Memory write breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
+			paused = true;
+			break;
+		}
+	}
+}
+
 void VBlankCallback()
 {
 	DrawFrameBuffer();
@@ -144,6 +170,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	input = new Input(*cpu, *memory);
 
 	memory->MemoryWriteCallback = MemoryWriteCallback;
+	memory->MemoryReadCallback = MemoryReadCallback;
 	video->VBlankCallback = VBlankCallback;
 
 	emulator = new Emulator(*cpu, *memory, *cartridge, *video, *input);
@@ -226,6 +253,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Debug::Print("done\n");
 			}
 
+			if (inputManager.GetKeyDown('E'))
+			{
+				breakpointsEnabled = true;
+				Debug::Print("[WinBoy]: Breakpoints enabled\n");
+			}
+
+			if (inputManager.GetKeyDown('D'))
+			{
+				breakpointsEnabled = false;
+				Debug::Print("[WinBoy]: Breakpoints disabled\n");
+			}
+
 			QueryPerformanceCounter(&previousFrameTicks);
 		}
 		else
@@ -244,14 +283,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				cpuTime = cpu->Ticks() / (double) GB_CLOCK_FREQUENCY;
 
 				// Test for PC breakpoints
-				const CPU::Registers& registers = cpu->GetRegisters();
-				for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(breakpoints) / sizeof(uint16_t); ++breakpointIdx)
+				if (breakpointsEnabled)
 				{
-					if (registers.pc == breakpoints[breakpointIdx])
+					const CPU::Registers& registers = cpu->GetRegisters();
+					for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(breakpoints) / sizeof(uint16_t); ++breakpointIdx)
 					{
-						Debug::Print("[WinBoy]: Breakpoint hit at 0x%04X\n", registers.pc);
-						paused = true;
-						break;
+						if (registers.pc == breakpoints[breakpointIdx])
+						{
+							Debug::Print("[WinBoy]: Breakpoint hit at 0x%04X\n", registers.pc);
+							paused = true;
+							break;
+						}
 					}
 				}
 
@@ -260,8 +302,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		window->ProcessMessages();
 
-		input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('A'));
-		input->SetButtonState(Input::BUTTON_B, inputManager.GetKey('S'));
+		input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('Z'));
+		input->SetButtonState(Input::BUTTON_B, inputManager.GetKey('X'));
 		input->SetButtonState(Input::BUTTON_START, inputManager.GetKey(VK_RETURN));
 		input->SetButtonState(Input::BUTTON_SELECT, inputManager.GetKey(VK_BACK));
 

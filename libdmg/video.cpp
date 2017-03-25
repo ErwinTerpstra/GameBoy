@@ -147,6 +147,19 @@ void Video::DrawLine()
 	else
 		memset(videoBuffer + scanline * GB_SCREEN_WIDTH / 4, 0x00, GB_SCREEN_WIDTH / 4);
 
+
+	if (READ_BIT(*lcdControlRegister, LCDC_WINDOW_ENABLE))
+	{
+		uint16_t windowMapAddress = READ_BIT(*lcdControlRegister, LCDC_WINDOW_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
+		uint16_t windowTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
+		uint8_t windowPalette = memory.ReadByte(GB_REG_BGP);
+
+		uint8_t scrollX = memory.ReadByte(GB_REG_WX);
+		uint8_t scrollY = memory.ReadByte(GB_REG_WY);
+
+		DrawMap(windowMapAddress, windowMapAddress, windowPalette, scrollX, scrollY);
+	}
+
 	if (READ_BIT(*lcdControlRegister, LCDC_SPRITE_ENABLE))
 		DrawSprites();
 }

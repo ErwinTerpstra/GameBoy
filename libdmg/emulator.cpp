@@ -108,6 +108,7 @@ const CPU::Instruction& Emulator::PrintInstruction(uint16_t address, bool prefix
 
 	switch (instruction.length)
 	{
+		case 0:
 		case 1:
 			sprintf_s(disassemblyBuffer, instruction.disassemblyFormat);
 			break;

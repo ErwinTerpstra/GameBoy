@@ -37,19 +37,18 @@ void Memory::WriteByte(uint16_t address, uint8_t value)
 
 	if (MemoryWriteCallback != NULL)
 		MemoryWriteCallback(address);
-
 }
 
 void Memory::WriteShort(uint16_t address, uint16_t value)
 {
+	buffer[address] = value & 0x00ff;
+	buffer[address + 1] = (value >> 8) & 0x0ff;
+
 	if (MemoryWriteCallback != NULL)
 	{
 		MemoryWriteCallback(address);
 		MemoryWriteCallback(address + 1);
 	}
-
-	buffer[address] = value & 0x00ff;
-	buffer[address + 1] = (value >> 8) & 0x0ff;
 }
 
 void Memory::WriteBuffer(const uint8_t* buffer, uint16_t startAddress, uint16_t size)
@@ -60,11 +59,20 @@ void Memory::WriteBuffer(const uint8_t* buffer, uint16_t startAddress, uint16_t 
 
 uint8_t Memory::ReadByte(uint16_t address) const
 {
+	if (MemoryReadCallback != NULL)
+		MemoryReadCallback(address);
+
 	return buffer[address];
 }
 
 uint16_t Memory::ReadShort(uint16_t address) const
 {
+	if (MemoryReadCallback != NULL)
+	{
+		MemoryReadCallback(address);
+		MemoryReadCallback(address + 1);
+	}
+
 	return DECODE_SHORT(buffer + address);
 }
 

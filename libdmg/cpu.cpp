@@ -19,7 +19,6 @@ CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), ticks(0)
 void CPU::Reset()
 {
 	interruptMasterEnable = true;
-	prefixNextInstruction = false;
 
 	registers.af = 0x01B0;
 	registers.bc = 0x0013;
@@ -30,7 +29,7 @@ void CPU::Reset()
 	registers.pc = 0x0100;
 
 	uint8_t* buffer = memory.RetrievePointer(0);
-	buffer[0xFF00] = 0xFF; // JOYP
+	buffer[0xFF00] = 0x0F; // JOYP
 	buffer[0xFF05] = 0x00; // TIMA
 	buffer[0xFF06] = 0x00; // TMA
 	buffer[0xFF07] = 0x00; // TAC
@@ -73,16 +72,27 @@ void CPU::ExecuteNextInstruction()
 	uint8_t opcode;
 	memory.Read(registers.pc, opcode);
 
+	// Handle prefixed instructions
+	bool prefixedInstruction;
+	if (opcode == 0xCB)
+	{
+		++registers.pc;
+		memory.Read(registers.pc, opcode);
+
+		prefixedInstruction = true;
+	}
+	else
+		prefixedInstruction = false;
+
 	// Read the instruction description from the instruction map
-	const Instruction& instruction = prefixNextInstruction ? PREFIXED_INSTRUCTION_MAP[opcode] : INSTRUCTION_MAP[opcode];
+	const Instruction& instruction = prefixedInstruction ? PREFIXED_INSTRUCTION_MAP[opcode] : INSTRUCTION_MAP[opcode];
 
 	if (instruction.handler == NULL)
 	{
-		printf("Missing instruction handler for opcode 0x%s%02X! at 0x%04X\n", prefixNextInstruction ? "CB" : "", opcode, registers.pc);
+		printf("Missing instruction handler for opcode 0x%s%02X! at 0x%04X\n", prefixedInstruction ? "CB" : "", opcode, registers.pc);
 		Debug::Halt();
+		return;
 	}
-
-	prefixNextInstruction = false;
 
 	// Retrieve a pointer to where the operands for this instruction are location
 	const uint8_t* operands = memory.RetrievePointer(registers.pc + 1);
@@ -310,11 +320,6 @@ void CPU::return_enable_interrupts(uint8_t opcode, const uint8_t* operands)
 	registers.pc = ReadStackShort();
 
 	enable_interupts(opcode, operands);
-}
-
-void CPU::prefix_cb(uint8_t opcode, const uint8_t* operands)
-{
-	prefixNextInstruction = true;
 }
 
 void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
@@ -797,7 +802,7 @@ void CPU::test_bit(uint8_t opcode, const uint8_t* operands)
 	uint8_t bit = (opcode - 0x40) / 8;
 	uint8_t result = READ_BIT(*value, bit);
 
-	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, result);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, result == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = SET_MASK(registers.f, FLAG_HALF_CARRY);
 }

@@ -88,7 +88,6 @@ namespace libdmg
 		uint64_t ticks;
 
 		bool interruptMasterEnable;
-		bool prefixNextInstruction;
 
 		uint8_t* interruptFlagRegister;
 		uint8_t* interruptEnableRegister;

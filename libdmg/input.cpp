@@ -15,16 +15,18 @@ Input::Input(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory), buttons(0)
 
 void Input::Update()
 {
+	uint8_t joypad = 0xC0;
+
 	if (!READ_BIT(*joypadRegister, BUTTONS_BIT))
-	{
-		*joypadRegister = ~((buttons >> 4) | (1 << BUTTONS_BIT));
-	}
+		joypad |= ~(buttons >> 4) & 0x0F;
 	else if (!READ_BIT(*joypadRegister, DPAD_BIT))
-	{
-		*joypadRegister = ~((buttons & 0x0F) | (1 << DPAD_BIT));
-	}
+		joypad |= ~(buttons & 0x0F) & 0x0F;
 	else
-		*joypadRegister = 0x3F;
+		joypad |= 0x0F;
+
+	joypad |= (*joypadRegister & 0x30);
+
+	*joypadRegister = joypad;
 }
 
 void Input::SetButtonState(Button button, bool state)
@@ -33,6 +35,6 @@ void Input::SetButtonState(Button button, bool state)
 
 	buttons = SET_BIT_IF(buttons, button, state);
 
-	if (state && !READ_BIT(buttons, button))
+	if (state && !READ_BIT(prevState, button))
 		cpu.RequestInterrupt(CPU::INT_JOYPAD);
 }

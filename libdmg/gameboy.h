@@ -55,6 +55,9 @@
 #define GB_REG_OBP0			0xFF48			// Object palette 0 data
 #define GB_REG_OBP1			0xFF49			// Object palette 1 data
 
+#define GB_REG_WY			0xFF4A			// Window Y
+#define GB_REG_WX			0xFF4B			// Window X
+
 #define GB_REG_IF			0xFF0F			// Interrupt flag
 #define GB_REG_IE			0xFFFF			// Interrupt enable
 

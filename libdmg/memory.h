@@ -10,6 +10,7 @@ namespace libdmg
 
 	public:
 		void (*MemoryWriteCallback)(uint16_t address);
+		void (*MemoryReadCallback)(uint16_t address);
 
 	private:
 		
