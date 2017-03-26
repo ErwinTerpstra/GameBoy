@@ -29,11 +29,9 @@ void Memory::WriteByte(uint16_t address, uint8_t value)
 		uint16_t source = value << 8;
 		for (uint8_t offset = 0; offset < 0x9F; ++offset)
 			buffer[GB_OAM + offset] = buffer[source + offset];
-
-		return;
 	}
-
-	buffer[address] = value;
+	else
+		buffer[address] = value;
 
 	if (MemoryWriteCallback != NULL)
 		MemoryWriteCallback(address);

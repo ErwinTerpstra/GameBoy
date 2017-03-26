@@ -16,10 +16,6 @@ namespace libdmg
 		
 	public:
 		
-		static void Print(const char* msg, va_list args)
-		{
-			vprintf(msg, args);
-		}
 
 		static void Print(const char* msg, ...)
 		{

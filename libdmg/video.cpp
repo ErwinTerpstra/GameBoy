@@ -10,13 +10,17 @@
 
 using namespace libdmg;
 
-Video::Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer) : 
+Video::Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer) :
 	VBlankCallback(NULL),
-	cpu(cpu), memory(memory), videoBuffer(videoBuffer), 
+	cpu(cpu), memory(memory), videoBuffer(videoBuffer),
 	scanline(0), ticks(0), modeTicks(0), currentMode(MODE_VBLANK)
 {
 	lcdControlRegister = memory.RetrievePointer(GB_REG_LCDC);
 	statRegister = memory.RetrievePointer(GB_REG_STAT);
+
+	layerStates[LAYER_BACKGROUND] = true;
+	layerStates[LAYER_WINDOW] = true;
+	layerStates[LAYER_SPRITES] = true;
 }
 
 void Video::Sync()
@@ -133,7 +137,7 @@ void Video::SetPixel(uint8_t x, uint8_t y, uint8_t color)
 
 void Video::DrawLine()
 {
-	if (READ_BIT(*lcdControlRegister, LCDC_BG_ENABLE))
+	if (layerStates[LAYER_BACKGROUND] && READ_BIT(*lcdControlRegister, LCDC_BG_ENABLE))
 	{
 		uint16_t bgMapAddress = READ_BIT(*lcdControlRegister, LCDC_BG_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
 		uint16_t bgTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
@@ -148,7 +152,7 @@ void Video::DrawLine()
 		memset(videoBuffer + scanline * GB_SCREEN_WIDTH / 4, 0x00, GB_SCREEN_WIDTH / 4);
 
 
-	if (READ_BIT(*lcdControlRegister, LCDC_WINDOW_ENABLE))
+	if (layerStates[LAYER_WINDOW] && READ_BIT(*lcdControlRegister, LCDC_WINDOW_ENABLE))
 	{
 		uint16_t windowMapAddress = READ_BIT(*lcdControlRegister, LCDC_WINDOW_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
 		uint16_t windowTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
@@ -160,7 +164,7 @@ void Video::DrawLine()
 		DrawMap(windowMapAddress, windowMapAddress, windowPalette, scrollX, scrollY);
 	}
 
-	if (READ_BIT(*lcdControlRegister, LCDC_SPRITE_ENABLE))
+	if (layerStates[LAYER_SPRITES] && READ_BIT(*lcdControlRegister, LCDC_SPRITE_ENABLE))
 		DrawSprites();
 }
 

@@ -20,6 +20,13 @@ namespace libdmg
 			MODE_TRANSFERRING_DATA = 3
 		};
 
+		enum Layer
+		{
+			LAYER_BACKGROUND = 0,
+			LAYER_WINDOW = 1,
+			LAYER_SPRITES = 2
+		};
+
 		void(*VBlankCallback)();
 
 	private:
@@ -73,11 +80,16 @@ namespace libdmg
 		uint16_t modeTicks;
 		Mode currentMode;
 
+		bool layerStates[3];
+
 	public:
 		Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
 		void Sync();
 		void DrawTileset();
+
+		void SetLayerState(Layer layer, bool state) { layerStates[layer] = state; }
+		bool GetLayerState(Layer layer) const { return layerStates[layer]; }
 
 		Mode CurrentMode() const { return currentMode; }
 		uint8_t Scanline() const { return scanline; }

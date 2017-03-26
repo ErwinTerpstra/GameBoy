@@ -30,18 +30,15 @@ const Color COLORS[] =
 uint16_t breakpoints[] =
 {
 	0x0000,
-	//0x034C,
-	//0x029C,
-	//0x030F,
-	//0x2A08
+	//0x0371
 };
 
 uint16_t memoryBreakpoints[] =
 {
 	0x0000,
-	//0xFF80,	// Current joypad state
+	0xFF80,	// Current joypad state
 	0xFF81, // Changed joypad bits
-	0xFFC5, // Changed joypad bits (copy)
+	//GB_REG_DMA
 };
 
 bool paused = false;
@@ -207,6 +204,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			Debug::Print("[WinBoy]: Execution paused.\n");
 			emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
 			emulator->PrintRegisters();
+		}
+
+		if (inputManager.GetKeyDown('1'))
+		{
+			video->SetLayerState(Video::LAYER_BACKGROUND, !video->GetLayerState(Video::LAYER_BACKGROUND));
+			Debug::Print("[WinBoy]: Background layer %s\n", video->GetLayerState(Video::LAYER_BACKGROUND) ? "enabled" : "disabled");
+		}
+
+		if (inputManager.GetKeyDown('2'))
+		{
+			video->SetLayerState(Video::LAYER_WINDOW, !video->GetLayerState(Video::LAYER_WINDOW));
+			Debug::Print("[WinBoy]: Window layer %s\n", video->GetLayerState(Video::LAYER_WINDOW) ? "enabled" : "disabled");
+		}
+
+		if (inputManager.GetKeyDown('3'))
+		{
+			video->SetLayerState(Video::LAYER_SPRITES, !video->GetLayerState(Video::LAYER_SPRITES));
+			Debug::Print("[WinBoy]: Sprite layer %s\n", video->GetLayerState(Video::LAYER_SPRITES) ? "enabled" : "disabled");
 		}
 
 		if (paused)
