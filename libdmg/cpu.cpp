@@ -10,7 +10,7 @@ using namespace libdmg;
 
 const uint16_t CPU::INTERRUPT_VECTORS[] = { 0x40, 0x48, 0x50, 0x58, 0x60 };
 
-CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), ticks(0)
+CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory)
 {
 	interruptEnableRegister = memory.RetrievePointer(GB_REG_IE);
 	interruptFlagRegister = memory.RetrievePointer(GB_REG_IF);
@@ -18,6 +18,7 @@ CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), ticks(0)
 
 void CPU::Reset()
 {
+	ticks = 0;
 	interruptMasterEnable = true;
 
 	registers.af = 0x01B0;
@@ -61,6 +62,8 @@ void CPU::Reset()
 	buffer[0xFF4A] = 0x00; // WY
 	buffer[0xFF4B] = 0x00; // WX
 	buffer[0xFFFF] = 0x00; // IE
+
+	timer.Reset();
 }
 
 void CPU::ExecuteNextInstruction()
@@ -157,12 +160,12 @@ void CPU::ExecuteInterrupt(Interrupt interrupt)
 
 uint8_t CPU::ReadStackByte()
 {
-	return memory.ReadByte(++registers.sp);
+	return memory.ReadByte(registers.sp++);
 }
 
 uint16_t CPU::ReadStackShort()
 {
-	uint16_t value = memory.ReadShort(registers.sp + 1);
+	uint16_t value = memory.ReadShort(registers.sp);
 	registers.sp += 2;
 
 	return value;
@@ -170,14 +173,14 @@ uint16_t CPU::ReadStackShort()
 
 void CPU::WriteStackByte(uint8_t value)
 {
-	memory.WriteByte(registers.sp, value);
 	registers.sp -= 1;
+	memory.WriteByte(registers.sp, value);
 }
 
 void CPU::WriteStackShort(uint16_t value)
 {
-	memory.WriteShort(registers.sp - 1, value);
 	registers.sp -= 2;
+	memory.WriteShort(registers.sp, value);
 }
 
 uint8_t CPU::ReadSourceValue(uint8_t opcode, const uint8_t* operands) const

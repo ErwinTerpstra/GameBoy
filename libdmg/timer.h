@@ -28,6 +28,7 @@ namespace libdmg
 	public:
 		Timer(CPU& cpu, Memory& memory);
 
+		void Reset();
 		void Sync();
 		void PerformCycle();
 

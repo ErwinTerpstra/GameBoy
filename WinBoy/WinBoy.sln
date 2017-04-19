@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinBoy", "WinBoy.vcxproj", "{58AD939C-6530-4425-BC42-2D7D0E7DCD33}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -14,6 +14,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		FastDebug|x64 = FastDebug|x64
+		FastDebug|x86 = FastDebug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
@@ -22,6 +24,10 @@ Global
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Debug|x64.Build.0 = Debug|x64
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Debug|x86.ActiveCfg = Debug|Win32
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Debug|x86.Build.0 = Debug|Win32
+		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.FastDebug|x64.ActiveCfg = Release|x64
+		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.FastDebug|x64.Build.0 = Release|x64
+		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.FastDebug|x86.ActiveCfg = Release|Win32
+		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.FastDebug|x86.Build.0 = Release|Win32
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Release|x64.ActiveCfg = Release|x64
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Release|x64.Build.0 = Release|x64
 		{58AD939C-6530-4425-BC42-2D7D0E7DCD33}.Release|x86.ActiveCfg = Release|Win32
@@ -30,6 +36,10 @@ Global
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Debug|x64.Build.0 = Debug|x64
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Debug|x86.ActiveCfg = Debug|Win32
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Debug|x86.Build.0 = Debug|Win32
+		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.FastDebug|x64.ActiveCfg = FastDebug|x64
+		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.FastDebug|x64.Build.0 = FastDebug|x64
+		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.FastDebug|x86.ActiveCfg = FastDebug|Win32
+		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.FastDebug|x86.Build.0 = FastDebug|Win32
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Release|x64.ActiveCfg = Release|x64
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Release|x64.Build.0 = Release|x64
 		{04AE055C-B0F6-47AD-BFAB-5C83DCDDBD43}.Release|x86.ActiveCfg = Release|Win32

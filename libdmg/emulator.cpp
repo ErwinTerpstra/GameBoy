@@ -25,6 +25,7 @@ void Emulator::Boot()
 	assert(cartridge.header->cartridgeHardware == 0);
 
 	cpu.Reset();
+	video.Reset();
 
 	// Copy lower 16K of rom to main memory
 	memory.WriteBuffer(cartridge.rom, 0x0000, 0x4000);

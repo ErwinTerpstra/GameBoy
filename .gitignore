@@ -10,3 +10,4 @@ WinBoy/x64/
 *.db
 WinBoy/Release/
 libdmg/Release/
+libdmg/FastDebug/

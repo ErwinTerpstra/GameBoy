@@ -10,10 +10,17 @@ using namespace libdmg;
 const uint16_t Timer::DIV_REGISTER_DIVIDER = 256;
 const uint16_t Timer::TIMER_DIVIDERS[] = { 1024, 16, 64, 256 };
 
-Timer::Timer(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory), ticks(0), divRegisterCycles(0), timerCycles(0)
+Timer::Timer(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory)
 {
 	divRegister = memory.RetrievePointer(GB_REG_DIV);
 	timerCounterRegister = memory.RetrievePointer(GB_REG_TIMA);
+}
+
+void Timer::Reset()
+{
+	ticks = 0;
+	divRegisterCycles = 0;
+	timerCycles = 0;
 }
 
 void Timer::Sync()

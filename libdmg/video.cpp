@@ -23,6 +23,14 @@ Video::Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer) :
 	layerStates[LAYER_SPRITES] = true;
 }
 
+void Video::Reset()
+{
+	ticks = 0;
+	modeTicks = 0;
+	scanline = 0;
+	currentMode = MODE_VBLANK;
+}
+
 void Video::Sync()
 {
 	const uint64_t& targetTicks = cpu.Ticks();

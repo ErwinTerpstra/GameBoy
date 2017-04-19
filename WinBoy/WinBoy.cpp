@@ -15,6 +15,7 @@
 #define ROM_FILE "../roms/Tetris (World).gb"
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
+#define MAX_CATCHUP_TIME 1.0
 
 using namespace libdmg;
 using namespace WinBoy;
@@ -109,7 +110,7 @@ void MemoryWriteCallback(uint16_t address)
 
 void VBlankCallback()
 {
-	DrawFrameBuffer();
+	//DrawFrameBuffer();
 }
 
 void DrawFrameBuffer()
@@ -206,6 +207,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			emulator->PrintRegisters();
 		}
 
+		if (inputManager.GetKeyDown('Y'))
+		{
+			Debug::Print("[WinBoy]: Emulator reset.\n");
+			emulator->Boot();
+			realTime = 0.0;
+		}
+
 		if (inputManager.GetKeyDown('1'))
 		{
 			video->SetLayerState(Video::LAYER_BACKGROUND, !video->GetLayerState(Video::LAYER_BACKGROUND));
@@ -297,6 +305,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// Calculate the time since boot for the CPU
 				cpuTime = cpu->Ticks() / (double) GB_CLOCK_FREQUENCY;
 
+				double delta = realTime - cpuTime;
+				if (delta > MAX_CATCHUP_TIME)
+				{
+					realTime = cpuTime;
+					printf("[WinBoy]: Warning! CPU was %.2fs behind. Skipping to catch up...\n", delta);
+				}
+
 				// Test for PC breakpoints
 				if (breakpointsEnabled)
 				{
@@ -315,6 +330,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			} while (cpuTime < realTime && !paused);
 		}
 
+		DrawFrameBuffer();
 		window->ProcessMessages();
 
 		input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('Z'));

@@ -3,25 +3,52 @@
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Window\window.h" />
-    <ClInclude Include="Window\buffer.h" />
-    <ClInclude Include="Window\bufferallocator.h" />
-    <ClInclude Include="Window\gdibufferallocator.h" />
-    <ClInclude Include="Window\memorybufferallocator.h" />
     <ClInclude Include="inputmanager.h" />
-    <ClInclude Include="Window\color.h" />
     <ClInclude Include="Window\util.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="WinBoy.h" />
+    <ClInclude Include="Window\buffer.h">
+      <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window\bufferallocator.h">
+      <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window\color.h">
+      <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window\gdibufferallocator.h">
+      <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window\memorybufferallocator.h">
+      <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window\window.h">
+      <Filter>Window</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinBoy.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="Window\buffer.cpp" />
-    <ClCompile Include="Window\bufferallocator.cpp" />
-    <ClCompile Include="Window\gdibufferallocator.cpp" />
-    <ClCompile Include="Window\memorybufferallocator.cpp" />
-    <ClCompile Include="Window\window.cpp" />
     <ClCompile Include="inputmanager.cpp" />
+    <ClCompile Include="Window\buffer.cpp">
+      <Filter>Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Window\bufferallocator.cpp">
+      <Filter>Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Window\gdibufferallocator.cpp">
+      <Filter>Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Window\memorybufferallocator.cpp">
+      <Filter>Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Window\window.cpp">
+      <Filter>Window</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Window">
+      <UniqueIdentifier>{e0b2bc26-b236-4d16-a087-87f203b045fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

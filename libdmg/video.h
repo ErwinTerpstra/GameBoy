@@ -85,6 +85,7 @@ namespace libdmg
 	public:
 		Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
+		void Reset();
 		void Sync();
 		void DrawTileset();
 
