@@ -24,6 +24,14 @@ void Emulator::Boot()
 	// Currently, only support ROM only cartridges
 	assert(cartridge.header->cartridgeHardware == 0);
 
+	// Reset CPU statistics
+	historyIdx = 0;
+	historyLength = 0;
+
+	for (uint16_t opcode = 0; opcode < 256; ++opcode)
+		instructionCount[opcode] = 0;
+
+	// Reset IO subsystems
 	cpu.Reset();
 	video.Reset();
 
@@ -43,7 +51,11 @@ void Emulator::Step()
 	historyLength = std::min(historyLength + 1U, (unsigned int)MAX_HISTORY_LENGTH);
 	executionHistory[historyIdx] = registers.pc;
 
-	cpu.ExecuteNextInstruction();
+	// Execute the next CPU instruction
+	const CPU::Instruction& instruction = cpu.ExecuteNextInstruction();
+	++instructionCount[instruction.opcode];
+
+	// Update IO subsystems
 	video.Sync();
 	input.Update();
 }
@@ -138,4 +150,44 @@ const CPU::Instruction& Emulator::PrintInstruction(uint16_t address, bool& prefi
 	Debug::Print("0x%04X\t0x%02X\t%s\n", address, opcode, disassemblyBuffer);
 
 	return instruction;
+}
+
+void Emulator::PrintInstructionCount() const
+{
+	static char suffixes[] = { 'K', 'M', 'G', 'T' };
+
+	// Print header
+	Debug::Print("\t");
+
+	for (uint8_t lowerNibble = 0; lowerNibble < 16; ++lowerNibble)
+		Debug::Print("    x%X\t", lowerNibble);
+
+	Debug::Print("\n");
+
+	// Print rows
+	char numberBuffer[16];
+	for (uint8_t upperNibble = 0; upperNibble < 16; ++upperNibble)
+	{
+		Debug::Print("%Xx\t", upperNibble);
+
+		for (uint8_t lowerNibble = 0; lowerNibble < 16; ++lowerNibble)
+		{
+			uint8_t opcode = (upperNibble << 4) | lowerNibble;
+
+			uint32_t count = instructionCount[opcode];
+			int8_t suffixIdx = -1;
+
+			while (count > 1000)
+			{
+				count /= 1000;
+				++suffixIdx;
+			}
+
+			sprintf_s(numberBuffer, 16, "%d%c", count, suffixIdx >= 0 ? suffixes[suffixIdx] : '\0');
+
+			Debug::Print("% 6s\t", numberBuffer);
+		}
+
+		Debug::Print("\n");
+	}
 }

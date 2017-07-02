@@ -13,6 +13,8 @@
 #include "inputmanager.h"
 
 #define ROM_FILE "../roms/Tetris (World).gb"
+//#define ROM_FILE "../roms/SuperMarioLand.gb"
+
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
 #define MAX_CATCHUP_TIME 1.0
@@ -301,6 +303,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			{
 				breakpointsEnabled = false;
 				Debug::Print("[WinBoy]: Breakpoints disabled\n");
+			}
+
+			if (inputManager.GetKeyDown('C'))
+			{
+				emulator->PrintInstructionCount();
 			}
 
 			QueryPerformanceCounter(&previousFrameTicks);

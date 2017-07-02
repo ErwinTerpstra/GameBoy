@@ -66,7 +66,7 @@ void CPU::Reset()
 	timer.Reset();
 }
 
-void CPU::ExecuteNextInstruction()
+const CPU::Instruction& CPU::ExecuteNextInstruction()
 {
 	// Sync the timer
 	timer.Sync();
@@ -94,7 +94,7 @@ void CPU::ExecuteNextInstruction()
 	{
 		printf("Missing instruction handler for opcode 0x%s%02X! at 0x%04X\n", prefixedInstruction ? "CB" : "", opcode, registers.pc);
 		Debug::Halt();
-		return;
+		return instruction;
 	}
 
 	// Retrieve a pointer to where the operands for this instruction are location
@@ -119,6 +119,7 @@ void CPU::ExecuteNextInstruction()
 		}
 	}
 
+	return instruction;
 }
 
 void CPU::RequestInterrupt(Interrupt interrupt)

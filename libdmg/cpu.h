@@ -96,7 +96,7 @@ namespace libdmg
 		CPU(Memory& memory);
 		
 		void Reset();
-		void ExecuteNextInstruction();
+		const Instruction& ExecuteNextInstruction();
 
 		void RequestInterrupt(Interrupt interrupt);
 		bool TestInterrupt(Interrupt interrupt);

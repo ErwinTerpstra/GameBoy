@@ -28,6 +28,8 @@ namespace libdmg
 		uint16_t historyIdx;
 		uint16_t historyLength;
 
+		uint32_t instructionCount[256];
+
 	public:
 		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input);
 		
@@ -37,6 +39,7 @@ namespace libdmg
 
 		void PrintRegisters() const;
 		void PrintDisassembly(uint16_t instructionCount) const;
+		void PrintInstructionCount() const;
 	
 	private:
 		const CPU::Instruction& PrintInstruction(uint16_t address, bool& prefixed) const;
