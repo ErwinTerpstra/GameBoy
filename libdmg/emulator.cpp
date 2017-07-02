@@ -72,18 +72,16 @@ void Emulator::PrintRegisters() const
 
 void Emulator::PrintDisassembly(uint16_t instructionCount) const
 {
+	bool prefixed;
 	const CPU::Registers& registers = cpu.GetRegisters();
 
-	bool prefixNextInstruction = false;
-	
 	Debug::Print("Disassembly:\n");
 
 	for (uint16_t historyEntryIdx = historyLength; historyEntryIdx > 0; --historyEntryIdx)
 	{
 		uint16_t historyIdx = (MAX_HISTORY_LENGTH + this->historyIdx - historyEntryIdx + 1) % MAX_HISTORY_LENGTH;
 
-		const CPU::Instruction& instruction = PrintInstruction(executionHistory[historyIdx], prefixNextInstruction);
-		prefixNextInstruction = instruction.opcode == 0xCB;
+		PrintInstruction(executionHistory[historyIdx], prefixed);
 	}
 
 	Debug::Print("===========>\n");
@@ -91,20 +89,30 @@ void Emulator::PrintDisassembly(uint16_t instructionCount) const
 	uint16_t address = registers.pc;
 	for (uint16_t instructionIdx = 0; instructionIdx < instructionCount; ++instructionIdx)
 	{
-		const CPU::Instruction& instruction = PrintInstruction(address, prefixNextInstruction);
+		const CPU::Instruction& instruction = PrintInstruction(address, prefixed);
 		address += instruction.length;
 
-		prefixNextInstruction = instruction.opcode == 0xCB;
+		if (prefixed)
+			++address;
 	}
 	
 	Debug::Print("\n");
 }
 
-const CPU::Instruction& Emulator::PrintInstruction(uint16_t address, bool prefixed) const
+const CPU::Instruction& Emulator::PrintInstruction(uint16_t address, bool& prefixed) const
 {
 	static char disassemblyBuffer[256];
 
 	uint8_t opcode = memory.ReadByte(address);
+
+	if (opcode == 0xCB)
+	{
+		prefixed = true;
+		opcode = memory.ReadByte(address + 1);
+	}
+	else
+		prefixed = false;
+
 	const CPU::Instruction& instruction = prefixed ? CPU::PREFIXED_INSTRUCTION_MAP[opcode] : CPU::INSTRUCTION_MAP[opcode];
 
 	switch (instruction.length)

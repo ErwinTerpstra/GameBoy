@@ -31,14 +31,29 @@ const Color COLORS[] =
 uint16_t breakpoints[] =
 {
 	0x0000,
+
+	//0x14F1,
+	//0x1509,
+
+	//0x2B42
+
 	//0x0371
 };
 
 uint16_t memoryBreakpoints[] =
 {
 	0x0000,
-	0xFF80,	// Current joypad state
-	0xFF81, // Changed joypad bits
+
+	//0xC203,
+	//0xC213,
+
+	//0xC000,		// DMA transfer source memory
+	//0xFF93,		// OAM source for first sprite in game type select: FF93, FF92, FF89
+
+	//0xFF80,	// Current joypad state
+	//0xFF81,	// Changed joypad bits
+
+	//GB_OAM,
 	//GB_REG_DMA
 };
 

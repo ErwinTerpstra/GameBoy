@@ -366,25 +366,25 @@ void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 void CPU::alu_sub(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
-	int16_t result = registers.a - value;
+	uint8_t result = registers.a - value;
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
 	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
-	SetFlag(FLAG_CARRY, result < 0);
+	SetFlag(FLAG_CARRY, value > registers.a);
 
 	registers.a = result;
 }
 
 void CPU::alu_sbc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode, operands);
-	int16_t result = registers.a - value - GetFlag(FLAG_CARRY);
+	uint8_t value = ReadSourceValue(opcode, operands) + GetFlag(FLAG_CARRY);
+	uint8_t result = registers.a - value;
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
 	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
-	SetFlag(FLAG_CARRY, result < 0);
+	SetFlag(FLAG_CARRY, value > result);
 
 	registers.a = result;
 }
@@ -426,12 +426,12 @@ void CPU::alu_xor(uint8_t opcode, const uint8_t* operands)
 void CPU::alu_cmp(uint8_t opcode, const uint8_t* operands)
 {
 	uint8_t value = ReadSourceValue(opcode, operands);
-	int16_t result = registers.a - value;
+	uint8_t result = registers.a - value;
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
 	SetFlag(FLAG_HALF_CARRY, (result ^ value ^ registers.a) & 0x10);
-	SetFlag(FLAG_CARRY, result < 0);
+	SetFlag(FLAG_CARRY, result > registers.a);
 }
 
 void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
@@ -691,7 +691,7 @@ void CPU::push_stack_16bit(uint8_t opcode, const uint8_t* operands)
 		case 0xC5: WriteStackShort(registers.bc); break;
 		case 0xD5: WriteStackShort(registers.de); break;
 		case 0xE5: WriteStackShort(registers.hl); break;
-		case 0xF5: WriteStackShort(registers.sp); break;
+		case 0xF5: WriteStackShort(registers.af); break;
 
 		default: assert(false && "Invalid opcode for handler!");
 	}
@@ -704,7 +704,7 @@ void CPU::pop_stack_16bit(uint8_t opcode, const uint8_t* operands)
 		case 0xC1: registers.bc = ReadStackShort(); break;
 		case 0xD1: registers.de = ReadStackShort(); break;
 		case 0xE1: registers.hl = ReadStackShort(); break;
-		case 0xF1: registers.sp = ReadStackShort(); break;
+		case 0xF1: registers.af = ReadStackShort(); break;
 
 		default: assert(false && "Invalid opcode for handler!");
 	}

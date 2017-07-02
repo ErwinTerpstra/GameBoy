@@ -39,7 +39,7 @@ namespace libdmg
 		void PrintDisassembly(uint16_t instructionCount) const;
 	
 	private:
-		const CPU::Instruction& PrintInstruction(uint16_t address, bool prefixed) const;
+		const CPU::Instruction& PrintInstruction(uint16_t address, bool& prefixed) const;
 	};
 
 }
