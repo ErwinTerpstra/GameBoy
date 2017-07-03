@@ -14,7 +14,6 @@
 #define GB_TILE_SIZE				GB_TILE_WIDTH * GB_TILE_HEIGHT / 4
 
 #define GB_MAX_CARTRIDGE_SIZE		8 * 1024 * 1024
-#define GB_MAIN_MEM_SIZE			64 * 1024
 
 #define GB_HBLANK_DURATION			204
 #define GB_VBLANK_DURATION			4560
@@ -61,5 +60,6 @@
 #define GB_REG_IF			0xFF0F			// Interrupt flag
 #define GB_REG_IE			0xFFFF			// Interrupt enable
 
+#define GB_MBC1_MAX_RAM		0x8000
 
 #endif

@@ -154,13 +154,11 @@ void DrawFrameBuffer()
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
-	memoryBuffer = new uint8_t[GB_MAIN_MEM_SIZE];
 
 	videoBufferSize = GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4;
 	videoBuffer = new uint8_t[videoBufferSize];
 
 	memset(romBuffer, 0, GB_MAX_CARTRIDGE_SIZE);
-	memset(memoryBuffer, 0, GB_MAIN_MEM_SIZE);
 	memset(videoBuffer, 0, videoBufferSize);
 
 	FILE* handle;
@@ -178,7 +176,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	Debug::Print("[WinBoy]: Rom file read with %u bytes.\n", romSize);
 
-	memory = new Memory(memoryBuffer);
+	memory = new Memory();
 	cpu = new CPU(*memory);
 	cartridge = new Cartridge(romBuffer);
 	video = new Video(*cpu, *memory, videoBuffer);

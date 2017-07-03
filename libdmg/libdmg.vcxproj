@@ -181,7 +181,10 @@
     <ClInclude Include="gameboy.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="libdmg.h" />
+    <ClInclude Include="mbc1.h" />
     <ClInclude Include="memory.h" />
+    <ClInclude Include="memorybank.h" />
+    <ClInclude Include="memorybuffer.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="video.h" />

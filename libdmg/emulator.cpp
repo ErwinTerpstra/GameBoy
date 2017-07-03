@@ -21,9 +21,6 @@ Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video,
 
 void Emulator::Boot()
 {
-	// Currently, only support ROM only cartridges
-	assert(cartridge.header->cartridgeHardware == 0);
-
 	// Reset CPU statistics
 	historyIdx = 0;
 	historyLength = 0;
@@ -31,16 +28,12 @@ void Emulator::Boot()
 	for (uint16_t opcode = 0; opcode < 256; ++opcode)
 		instructionCount[opcode] = 0;
 
+	// Map cartridge rom and ram to memory
+	memory.BindCatridge(cartridge);
+
 	// Reset IO subsystems
 	cpu.Reset();
 	video.Reset();
-
-	// Copy lower 16K of rom to main memory
-	memory.WriteBuffer(cartridge.rom, 0x0000, 0x4000);
-
-	// Copy upper 16K of rom to main memory
-	// TODO: Handle memory bank controllers
-	memory.WriteBuffer(cartridge.rom + 0x4000, 0x4000, 0x4000);
 }
 
 void Emulator::Step()

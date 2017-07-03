@@ -13,6 +13,9 @@
     <ClInclude Include="timer.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="video.h" />
+    <ClInclude Include="memorybank.h" />
+    <ClInclude Include="memorybuffer.h" />
+    <ClInclude Include="mbc1.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />

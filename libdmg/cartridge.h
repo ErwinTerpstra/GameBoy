@@ -50,10 +50,10 @@ namespace libdmg
 		
 		const Header* header;
 
-		const uint8_t* rom;
+		uint8_t* rom;
 
 	public:
-		Cartridge(const uint8_t* buffer);
+		Cartridge(uint8_t* buffer);
 
 	};
 
