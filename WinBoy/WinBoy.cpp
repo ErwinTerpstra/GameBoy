@@ -12,8 +12,8 @@
 
 #include "inputmanager.h"
 
-#define ROM_FILE "../roms/Tetris (World).gb"
-//#define ROM_FILE "../roms/SuperMarioLand.gb"
+//#define ROM_FILE "../roms/Tetris (World).gb"
+#define ROM_FILE "../roms/SuperMarioLand.gb"
 
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
@@ -32,7 +32,7 @@ const Color COLORS[] =
 
 uint16_t breakpoints[] =
 {
-	0x0000,
+	0xFFFF,
 
 	//0x14F1,
 	//0x1509,
@@ -59,7 +59,7 @@ uint16_t memoryBreakpoints[] =
 	//GB_REG_DMA
 };
 
-bool paused = false;
+bool paused = true;
 bool breakpointsEnabled = true;
 
 uint8_t* romBuffer;

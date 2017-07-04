@@ -16,15 +16,15 @@ uint16_t null;
 
 Memory::Memory() : MemoryWriteCallback(NULL)
 {
-	MemoryBuffer* vramBuffer	= new MemoryBuffer(new uint8_t[0x2000]);
-	MemoryBuffer* wramBuffer	= new MemoryBuffer(new uint8_t[0x2000]);
+	MemoryBuffer* vramBuffer	= new MemoryBuffer(0x2000);
+	MemoryBuffer* wramBuffer	= new MemoryBuffer(0x2000);
 
-	MemoryBuffer* oamBuffer		= new MemoryBuffer(new uint8_t[0x9F]);
-	MemoryBuffer* ioBuffer		= new MemoryBuffer(new uint8_t[0x7F]);
-	MemoryBuffer* hramBuffer	= new MemoryBuffer(new uint8_t[0xF1]);
-	MemoryBuffer* ieBuffer		= new MemoryBuffer(new uint8_t[0x01]);
+	MemoryBuffer* oamBuffer		= new MemoryBuffer(0x9F);
+	MemoryBuffer* ioBuffer		= new MemoryBuffer(0x7F);
+	MemoryBuffer* hramBuffer	= new MemoryBuffer(0xF1);
+	MemoryBuffer* ieBuffer		= new MemoryBuffer(0x01);
 
-	MemoryBuffer* naBuffer		= new MemoryBuffer(new uint8_t[0x5F]);
+	MemoryBuffer* naBuffer		= new MemoryBuffer(0x5F);
 
 	banks[BANK_ROM]		= { 0x0000, 0x7FFF, NULL };
 	banks[BANK_VRAM]	= { 0x8000, 0x9FFF, vramBuffer };
@@ -58,7 +58,16 @@ void Memory::BindCatridge(Cartridge& cartridge)
 			break;
 		}
 
-		case 1: // MBC1
+		case 1: // MBC1 ROM only
+		{
+			MBC1* mbc = new MBC1(cartridge);
+			romRange.bank = &mbc->rom;
+			ramRange.bank = NULL;
+			break;
+		}
+
+		case 2: // MBC1 + RAM
+		case 3:
 		{
 			MBC1* mbc = new MBC1(cartridge);
 			romRange.bank = &mbc->rom;
@@ -72,12 +81,13 @@ void Memory::BindCatridge(Cartridge& cartridge)
 	}
 }
 
-uint8_t* Memory::RetrievePointer(uint16_t address)
+const uint8_t* Memory::RetrievePointer(uint16_t address) const
 {
-	return const_cast<uint8_t*>(static_cast<const Memory*>(this)->RetrievePointer(address));
+	const MemoryRange* range = FindMemoryRange(address);
+	return range->bank->RetrievePointer(address - range->start);
 }
 
-const uint8_t* Memory::RetrievePointer(uint16_t address) const
+const Memory::MemoryRange* Memory::FindMemoryRange(uint16_t address) const
 {
 	uint8_t bankIdx =
 		(address >= banks[BANK_VRAM].start) +
@@ -97,19 +107,21 @@ const uint8_t* Memory::RetrievePointer(uint16_t address) const
 
 	// Make sure the range has a registered memory bank
 	assert(range.bank != NULL);
-	
-	return range.bank->RetrievePointer(address - range.start);
+
+	return &range;
 }
 
 void Memory::WriteByte(uint16_t address, uint8_t value)
 {
 	if (address == GB_REG_DMA)
 	{
-		uint8_t* srcBuffer = RetrievePointer(value << 8);
-		WriteBuffer(srcBuffer, GB_OAM, 0x9F);
+		Copy(value << 8, GB_OAM, 0x9F);
 	}
 	else
-		*RetrievePointer(address) = value;
+	{
+		MemoryRange* range = FindMemoryRange(address);
+		range->bank->WriteByte(address - range->start, value);
+	}
 
 	if (MemoryWriteCallback != NULL)
 		MemoryWriteCallback(address);
@@ -123,18 +135,20 @@ void Memory::WriteShort(uint16_t address, uint16_t value)
 		MemoryWriteCallback(address + 1);
 	}
 
-	uint8_t* buffer = RetrievePointer(address);
-
-	buffer[0] = value & 0x00ff;
-	buffer[1] = (value >> 8) & 0x0ff;
+	MemoryRange* range = FindMemoryRange(address);
+	range->bank->WriteShort(address - range->start, value);
 }
 
 void Memory::WriteBuffer(const uint8_t* srcBuffer, uint16_t startAddress, uint16_t size)
 {
-	uint8_t* dstBuffer = RetrievePointer(startAddress);
-
 	for (uint16_t offset = 0; offset < size; ++offset)
-		dstBuffer[offset] = srcBuffer[offset];
+		WriteByte(startAddress + offset, srcBuffer[offset]);
+}
+
+void Memory::Copy(uint16_t srcAddress, uint16_t dstAddress, uint16_t size)
+{
+	for (uint16_t offset = 0; offset < size; ++offset)
+		WriteByte(dstAddress + offset, ReadByte(srcAddress + offset));
 }
 
 uint8_t Memory::ReadByte(uint16_t address) const
@@ -142,7 +156,8 @@ uint8_t Memory::ReadByte(uint16_t address) const
 	if (MemoryReadCallback != NULL)
 		MemoryReadCallback(address);
 
-	return *RetrievePointer(address);
+	const MemoryRange* range = FindMemoryRange(address);
+	return range->bank->ReadByte(address - range->start);
 }
 
 uint16_t Memory::ReadShort(uint16_t address) const
@@ -153,7 +168,8 @@ uint16_t Memory::ReadShort(uint16_t address) const
 		MemoryReadCallback(address + 1);
 	}
 
-	return DECODE_SHORT(RetrievePointer(address));
+	const MemoryRange* range = FindMemoryRange(address);
+	return range->bank->ReadShort(address - range->start);
 }
 
 void Memory::Read(uint16_t address, uint8_t& value) const

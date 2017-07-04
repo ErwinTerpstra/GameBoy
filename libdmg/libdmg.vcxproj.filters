@@ -7,24 +7,39 @@
     <ClInclude Include="cartridge.h" />
     <ClInclude Include="emulator.h" />
     <ClInclude Include="gameboy.h" />
-    <ClInclude Include="memory.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="video.h" />
-    <ClInclude Include="memorybank.h" />
-    <ClInclude Include="memorybuffer.h" />
-    <ClInclude Include="mbc1.h" />
+    <ClInclude Include="memorybank.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memorybuffer.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="mbc1.h">
+      <Filter>memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="emulator.cpp" />
-    <ClCompile Include="memory.cpp" />
     <ClCompile Include="instructions.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="video.cpp" />
+    <ClCompile Include="memory.cpp">
+      <Filter>memory</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="memory">
+      <UniqueIdentifier>{7802465e-8413-4c23-94df-7ff3768b663c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

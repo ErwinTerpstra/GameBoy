@@ -8,7 +8,9 @@ namespace libdmg
 	class Cartridge
 	{
 	public:
-		const uint16_t HEADER_OFFSET = 0x0100;
+		static const uint16_t HEADER_OFFSET = 0x0100;
+
+		static const uint8_t RAM_SIZES[6];
 
 		struct Header
 		{
