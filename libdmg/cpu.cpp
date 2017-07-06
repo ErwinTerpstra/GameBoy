@@ -108,17 +108,23 @@ const CPU::Instruction& CPU::ExecuteNextInstruction()
 	// Increase the clock cycle count
 	ticks += instruction.duration;
 
-	// Test for interrupts
+	return instruction;
+}
+
+
+void CPU::TestInterrupts()
+{
 	if (interruptMasterEnable)
 	{
 		for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
 		{
 			if (TestInterrupt((Interrupt)interrupt))
+			{
+				halted = false;
 				break;
+			}
 		}
 	}
-
-	return instruction;
 }
 
 void CPU::RequestInterrupt(Interrupt interrupt)
@@ -229,6 +235,13 @@ void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
 	interruptMasterEnable = false;
 }
 
+
+void CPU::halt(uint8_t opcode, const uint8_t* operands)
+{
+	// Only halt if interrupts are enabled
+	halted = interruptMasterEnable;
+}
+
 void CPU::jump(uint8_t opcode, const uint8_t* operands)
 {
 	registers.pc = DECODE_SHORT(operands);
@@ -284,6 +297,26 @@ void CPU::call(uint8_t opcode, const uint8_t* operands)
 {
 	WriteStackShort(registers.pc);
 	registers.pc = DECODE_SHORT(operands);
+}
+
+void CPU::call_conditional(uint8_t opcode, const uint8_t* operands)
+{
+	bool conditional;
+
+	switch (opcode)
+	{
+		case 0xC4: conditional = !GetFlag(FLAG_ZERO); break;
+		case 0xCC: conditional = GetFlag(FLAG_ZERO); break;
+		case 0xD4: conditional = !GetFlag(FLAG_CARRY); break;
+		case 0xDC: conditional = GetFlag(FLAG_CARRY); break;
+
+		default: assert(false && "Invalid opcode for handler!");
+	}
+	if (conditional)
+	{
+		WriteStackShort(registers.pc);
+		registers.pc = DECODE_SHORT(operands);
+	}
 }
 
 void CPU::restart(uint8_t opcode, const uint8_t* operands)

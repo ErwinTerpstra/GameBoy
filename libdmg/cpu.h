@@ -88,6 +88,7 @@ namespace libdmg
 		uint64_t ticks;
 
 		bool interruptMasterEnable;
+		bool halted;
 
 		uint8_t* interruptFlagRegister;
 		uint8_t* interruptEnableRegister;
@@ -96,21 +97,25 @@ namespace libdmg
 		CPU(Memory& memory);
 		
 		void Reset();
+		
 		const Instruction& ExecuteNextInstruction();
+		void TestInterrupts();
 
 		void RequestInterrupt(Interrupt interrupt);
+
+		bool InterruptMasterEnable() const { return interruptMasterEnable; }
+		bool Halted() const { return halted; }
+
+		const Registers& GetRegisters() const { return registers; }
+		const uint64_t& Ticks() const { return ticks; }
+	
+	private:
 		bool TestInterrupt(Interrupt interrupt);
 		void ExecuteInterrupt(Interrupt interrupt);
 
-		const uint64_t& Ticks() const { return ticks; }
-		bool InterruptMasterEnable() const { return interruptMasterEnable; }
-
-		const Registers& GetRegisters() const { return registers; }
-	private:
-
-		DMG_INLINE void CPU::SetFlag(Flags flag, bool state) { registers.f = SET_MASK_IF(registers.f, flag, state); }
-
-		DMG_INLINE bool CPU::GetFlag(Flags flag) { return READ_MASK(registers.f, flag); }
+		// Flag register manipulation
+		DMG_INLINE void SetFlag(Flags flag, bool state) { registers.f = SET_MASK_IF(registers.f, flag, state); }
+		DMG_INLINE bool GetFlag(Flags flag) { return READ_MASK(registers.f, flag); }
 
 		/* Stack utilities*/
 		uint8_t ReadStackByte();
@@ -127,6 +132,7 @@ namespace libdmg
 
 		/* CPU control */
 		void nop(uint8_t opcode, const uint8_t* operands) { }
+		void halt(uint8_t opcode, const uint8_t* operands);
 		void enable_interupts(uint8_t opcode, const uint8_t* operands);
 		void disable_interrupts(uint8_t opcode, const uint8_t* operands);
 
@@ -137,13 +143,12 @@ namespace libdmg
 		void jump_to_offset_conditional(uint8_t opcode, const uint8_t* operands);
 
 		void call(uint8_t opcode, const uint8_t* operands);
+		void call_conditional(uint8_t opcode, const uint8_t* operands);
 		void restart(uint8_t opcode, const uint8_t* operands);
 
 		void return_default(uint8_t opcode, const uint8_t* operands);
 		void return_conditional(uint8_t opcode, const uint8_t* operands);
 		void return_enable_interrupts(uint8_t opcode, const uint8_t* operands);
-
-		void prefix_cb(uint8_t opcode, const uint8_t* operands);
 
 		/* 8-bit ALU */
 		void alu_add(uint8_t opcode, const uint8_t* operands);

@@ -62,7 +62,9 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		{
 			MBC1* mbc = new MBC1(cartridge);
 			romRange.bank = &mbc->rom;
-			ramRange.bank = NULL;
+			
+			// TODO: MBC1 does not have RAM but games still write to this address space, replace with some sort of NULL ram
+			ramRange.bank = new MemoryBuffer(0x2000);
 			break;
 		}
 

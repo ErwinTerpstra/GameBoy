@@ -14,13 +14,16 @@ using namespace libdmg;
 
 Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input) : 
 	cpu(cpu), memory(memory), cartridge(cartridge), video(video), input(input),
-	historyIdx(0), historyLength(0)
+	ticks(0), ticksUntilNextInstruction(0), historyIdx(0), historyLength(0)
 {
 
 }
 
 void Emulator::Boot()
 {
+	ticks = 0;
+	ticksUntilNextInstruction = 0;
+
 	// Reset CPU statistics
 	historyIdx = 0;
 	historyLength = 0;
@@ -38,6 +41,32 @@ void Emulator::Boot()
 
 void Emulator::Step()
 {
+	++ticks;
+
+	uint64_t previousTicks = cpu.Ticks();
+
+	if (!cpu.Halted())
+	{
+		if (ticksUntilNextInstruction == 0)
+			ExecuteNextInstruction();
+	}
+	
+	cpu.TestInterrupts();
+
+	if (ticksUntilNextInstruction > 0)
+		--ticksUntilNextInstruction;
+
+
+	// Delay next CPU instruction until we've caught up 
+	ticksUntilNextInstruction += (cpu.Ticks() - previousTicks);
+
+	// Update IO subsystems
+	video.Sync(ticks);
+	input.Update();
+}
+
+void Emulator::ExecuteNextInstruction()
+{
 	// Save the PC in the instruction history
 	const CPU::Registers& registers = cpu.GetRegisters();
 	historyIdx = historyIdx < MAX_HISTORY_LENGTH - 1 ? historyIdx + 1 : 0;
@@ -46,11 +75,8 @@ void Emulator::Step()
 
 	// Execute the next CPU instruction
 	const CPU::Instruction& instruction = cpu.ExecuteNextInstruction();
-	++instructionCount[instruction.opcode];
 
-	// Update IO subsystems
-	video.Sync();
-	input.Update();
+	++instructionCount[instruction.opcode];
 }
 
 void Emulator::PrintRegisters() const

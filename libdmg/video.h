@@ -86,7 +86,7 @@ namespace libdmg
 		Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer);
 
 		void Reset();
-		void Sync();
+		void Sync(const uint64_t& targetTicks);
 		void DrawTileset();
 
 		void SetLayerState(Layer layer, bool state) { layerStates[layer] = state; }

@@ -104,7 +104,7 @@ namespace libdmg
 			}
 
 		private:
-			const uint8_t* GetBank(uint16_t bank) const { return mbc.cartridge.rom + (0x3FFF * bank); }
+			const uint8_t* GetBank(uint16_t bank) const { return mbc.cartridge.rom + (0x4000 * bank); }
 
 		};
 

@@ -30,6 +30,8 @@ namespace libdmg
 
 		uint32_t instructionCount[256];
 
+		uint64_t ticks;
+		uint32_t ticksUntilNextInstruction;
 	public:
 		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input);
 		
@@ -40,8 +42,12 @@ namespace libdmg
 		void PrintRegisters() const;
 		void PrintDisassembly(uint16_t instructionCount) const;
 		void PrintInstructionCount() const;
+
+		const uint64_t& Ticks() const { return ticks; }
 	
 	private:
+		void ExecuteNextInstruction();
+
 		const CPU::Instruction& PrintInstruction(uint16_t address, bool& prefixed) const;
 	};
 

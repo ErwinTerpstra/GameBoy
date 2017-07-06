@@ -31,9 +31,9 @@ void Video::Reset()
 	currentMode = MODE_VBLANK;
 }
 
-void Video::Sync()
+void Video::Sync(const uint64_t& targetTicks)
 {
-	const uint64_t& targetTicks = cpu.Ticks();
+	//const uint64_t& targetTicks = cpu.Ticks();
 	
 	while (ticks < targetTicks)
 		Step();

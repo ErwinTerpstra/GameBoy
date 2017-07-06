@@ -12,8 +12,8 @@
 
 #include "inputmanager.h"
 
-//#define ROM_FILE "../roms/Tetris (World).gb"
-#define ROM_FILE "../roms/SuperMarioLand.gb"
+#define ROM_FILE "../roms/Tetris (World).gb"
+//#define ROM_FILE "../roms/SuperMarioLand.gb"
 
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
@@ -33,6 +33,8 @@ const Color COLORS[] =
 uint16_t breakpoints[] =
 {
 	0xFFFF,
+
+	//0x4000,
 
 	//0x14F1,
 	//0x1509,
@@ -59,7 +61,7 @@ uint16_t memoryBreakpoints[] =
 	//GB_REG_DMA
 };
 
-bool paused = true;
+bool paused = false;
 bool breakpointsEnabled = true;
 
 uint8_t* romBuffer;
@@ -312,7 +314,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		else
 		{
-			double cpuTime;
+			double emulatorTime;
 			LARGE_INTEGER currentTicks;
 			QueryPerformanceCounter(&currentTicks);
 			realTime += (currentTicks.QuadPart - previousFrameTicks.QuadPart) * secondsPerTick;
@@ -323,13 +325,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				emulator->Step();
 				
 				// Calculate the time since boot for the CPU
-				cpuTime = cpu->Ticks() / (double) GB_CLOCK_FREQUENCY;
+				emulatorTime = emulator->Ticks() / (double) GB_CLOCK_FREQUENCY;
 
-				double delta = realTime - cpuTime;
+				double delta = realTime - emulatorTime;
 				if (delta > MAX_CATCHUP_TIME)
 				{
-					realTime = cpuTime;
-					printf("[WinBoy]: Warning! CPU was %.2fs behind. Skipping to catch up...\n", delta);
+					realTime = emulatorTime;
+					printf("[WinBoy]: Warning! Emulator was %.2fs behind. Skipping to catch up...\n", delta);
 				}
 
 				// Test for PC breakpoints
@@ -347,7 +349,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					}
 				}
 
-			} while (cpuTime < realTime && !paused);
+			} while (emulatorTime < realTime && !paused);
 		}
 
 		DrawFrameBuffer();
