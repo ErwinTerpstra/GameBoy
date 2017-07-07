@@ -96,7 +96,7 @@ void Video::DrawTileset()
 
 	memset(videoBuffer, 0, GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4);
 
-	for (uint16_t tileIdx = 0; tileIdx < 192; ++tileIdx)
+	for (uint16_t tileIdx = 0; tileIdx < 256; ++tileIdx)
 	{
 		uint16_t gridX = (tileIdx % 20) * GB_TILE_WIDTH;
 		uint16_t gridY = (tileIdx / 20) * GB_TILE_HEIGHT;
@@ -182,7 +182,9 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 	uint8_t tileY = mapY / GB_TILE_HEIGHT;
 	uint8_t tileLocalY = mapY % GB_TILE_HEIGHT;
 
-	uint8_t tileBuffer[GB_TILE_SIZE];
+	uint8_t tileBuffer[2];
+
+	bool signedTileIndices = tileDataAddress = GB_TILE_DATA_1;
 
 	for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
 	{
@@ -191,16 +193,21 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 
 		// Read the index of the tile to use for this pixel
 		uint8_t tileIdx = memory.ReadByte(mapAddress + tileY * (GB_BG_WIDTH / GB_TILE_WIDTH) + tileX);
-		
+	
 		uint8_t tileLocalX = mapX % GB_TILE_WIDTH;
 
-		uint16_t tileAddress = tileDataAddress + GB_TILE_SIZE * tileIdx;
-		DecodeTile(tileAddress, tileBuffer);
+		uint16_t tileAddress = tileDataAddress; 
+		
+		if (signedTileIndices)
+			tileAddress += GB_TILE_SIZE * DECODE_SIGNED_BYTE(&tileIdx);
+		else
+			tileAddress += GB_TILE_SIZE * tileIdx;
+
+		DecodeTile(tileAddress, tileLocalY, tileBuffer);
 
 		// Read the tile data byte
-		uint8_t tilePixelOffset = (tileLocalY * GB_TILE_WIDTH) + tileLocalX;
-		uint8_t tileData = tileBuffer[tilePixelOffset / 4];
-		uint8_t tileBit = (tilePixelOffset % 4) << 1;
+		uint8_t tileData = tileBuffer[tileLocalX / 4];
+		uint8_t tileBit = (tileLocalX % 4) << 1;
 
 		// Retrieve the palette color index from the 4 pixel byte
 		uint8_t paletteColorIdx = (tileData >> tileBit) & 0x03;
@@ -251,8 +258,8 @@ void Video::DrawSprites()
 		}
 
 		// Read the tile data for this sprite
-		uint8_t tileBuffer[GB_TILE_SIZE];
-		DecodeTile(GB_TILE_DATA_0 + GB_TILE_SIZE * tileIdx, tileBuffer);
+		uint8_t tileBuffer[2];
+		DecodeTile(GB_TILE_DATA_0 + GB_TILE_SIZE * tileIdx, tileY, tileBuffer);
 
 		// Read the palette to use
 		uint8_t palette = memory.ReadByte(READ_BIT(sprite->flags, SPRITE_PALETTE) ? GB_REG_OBP1 : GB_REG_OBP0);
@@ -276,7 +283,7 @@ void Video::DrawSprites()
 			}
 
 			// Read the tile data byte
-			uint8_t tilePixelOffset = (tileY * GB_TILE_WIDTH) + (flipX ? (GB_TILE_WIDTH - 1 - tileX) : tileX);
+			uint8_t tilePixelOffset = flipX ? (GB_TILE_WIDTH - 1 - tileX) : tileX;
 			uint8_t tileData = tileBuffer[tilePixelOffset / 4];
 			uint8_t tileBit = (tilePixelOffset % 4) << 1;
 
@@ -297,29 +304,31 @@ void Video::DrawSprites()
 void Video::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
 {
 	for (uint8_t tileY = 0; tileY < GB_TILE_HEIGHT; ++tileY)
+		DecodeTile(tileAddress, tileY, tileBuffer + tileY * 2);
+}
+
+void Video::DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t* tileBuffer)
+{
+	uint8_t lowerByte = memory.ReadByte(tileAddress + (tileY << 1) + 0);
+	uint8_t upperByte = memory.ReadByte(tileAddress + (tileY << 1) + 1);
+
+	uint8_t leftByte = 0;
+	uint8_t rightByte = 0;
+
+	for (uint8_t pixel = 0; pixel < 4; ++pixel)
 	{
-		uint8_t lowerByte = memory.ReadByte(tileAddress + (tileY << 1) + 0);
-		uint8_t upperByte = memory.ReadByte(tileAddress + (tileY << 1) + 1);
-
-		uint8_t leftByte = 0;
-		uint8_t rightByte = 0;
-
-		for (uint8_t pixel = 0; pixel < 4; ++pixel)
-		{
-			leftByte |= READ_BIT(lowerByte, 7 - pixel) << ((pixel << 1) + 0);
-			leftByte |= READ_BIT(upperByte, 7 - pixel) << ((pixel << 1) + 1);
-		}
-
-		for (uint8_t pixel = 0; pixel < 4; ++pixel)
-		{
-			rightByte |= READ_BIT(lowerByte, 3 - pixel) << ((pixel << 1) + 0);
-			rightByte |= READ_BIT(upperByte, 3 - pixel) << ((pixel << 1) + 1);
-		}
-
-		tileBuffer[tileY * 2 + 0] = leftByte;
-		tileBuffer[tileY * 2 + 1] = rightByte;
+		leftByte |= READ_BIT(lowerByte, 7 - pixel) << ((pixel << 1) + 0);
+		leftByte |= READ_BIT(upperByte, 7 - pixel) << ((pixel << 1) + 1);
 	}
 
+	for (uint8_t pixel = 0; pixel < 4; ++pixel)
+	{
+		rightByte |= READ_BIT(lowerByte, 3 - pixel) << ((pixel << 1) + 0);
+		rightByte |= READ_BIT(upperByte, 3 - pixel) << ((pixel << 1) + 1);
+	}
+
+	tileBuffer[0] = leftByte;
+	tileBuffer[1] = rightByte;
 }
 
 void Video::SwitchMode(Mode mode)

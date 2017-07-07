@@ -358,16 +358,32 @@ void CPU::return_enable_interrupts(uint8_t opcode, const uint8_t* operands)
 	enable_interupts(opcode, operands);
 }
 
-void CPU::encode_bcd(uint8_t opcode, const uint8_t* operands)
+void CPU::adjust_bcd(uint8_t opcode, const uint8_t* operands)
 {
-	SetFlag(FLAG_ZERO, registers.a == 0);
+	uint8_t value = registers.a;
+
+	if (GetFlag(FLAG_SUBTRACT))
+	{
+		if (GetFlag(FLAG_HALF_CARRY))
+			value -= 0x06;
+
+		if (GetFlag(FLAG_CARRY))
+			value -= 0x60;
+	}
+	else
+	{
+		if ((value & 0x0F) > 0x09 || GetFlag(FLAG_HALF_CARRY))
+			value += 0x06;
+
+		if (value > 0x9F || GetFlag(FLAG_CARRY))
+			value += 0x60;
+	}
+
+	SetFlag(FLAG_ZERO, value == 0);
 	SetFlag(FLAG_HALF_CARRY, false);
-	SetFlag(FLAG_CARRY, registers.a > 99);
+	SetFlag(FLAG_CARRY, value < registers.a);
 
-	uint8_t high = (registers.a / 10) & 0xF;
-	uint8_t low = registers.a % 10;
-
-	registers.a = (high << 4) | low;
+	registers.a = value;
 }
 
 void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
@@ -777,6 +793,50 @@ void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* opera
 {
 	uint8_t bit0 = READ_BIT(registers.a, 0);
 	registers.a = ((registers.a >> 1) | (bit0 << 7));
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_left(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(*value, 7);
+	*value = ((*value << 1) | READ_MASK(registers.f, FLAG_CARRY));
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_right(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(*value, 0);
+	*value = ((*value >> 1) | (READ_MASK(registers.f, FLAG_CARRY) << 7));
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_left_circular(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(*value, 7);
+	*value = ((*value << 1) | bit7);
+
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
+	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+}
+
+void CPU::rotate_right_circular(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(*value, 0);
+	*value = ((*value >> 1) | (bit0 << 7));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);

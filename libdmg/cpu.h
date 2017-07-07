@@ -165,7 +165,7 @@ namespace libdmg
 		void alu_complement_carry(uint8_t opcode, const uint8_t* operands);
 		void alu_set_carry(uint8_t opcode, const uint8_t* operands);
 
-		void encode_bcd(uint8_t opcode, const uint8_t* operands);
+		void adjust_bcd(uint8_t opcode, const uint8_t* operands);
 
 		/* 16-bit alu */
 		void alu_inc_16bit(uint8_t opcode, const uint8_t* operands);
@@ -199,6 +199,11 @@ namespace libdmg
 		void rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* operands);
 
 		/* Prefixed instructions */
+		void rotate_left(uint8_t opcode, const uint8_t* operands);
+		void rotate_right(uint8_t opcode, const uint8_t* operands);
+		void rotate_left_circular(uint8_t opcode, const uint8_t* operands);
+		void rotate_right_circular(uint8_t opcode, const uint8_t* operands);
+
 		void shift_left_arithmetically(uint8_t opcode, const uint8_t* operands);
 		void shift_right_arithmetically(uint8_t opcode, const uint8_t* operands);
 		void shift_right_logically(uint8_t opcode, const uint8_t* operands);

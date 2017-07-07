@@ -43,11 +43,7 @@ void Memory::BindCatridge(Cartridge& cartridge)
 	MemoryRange& romRange = banks[BANK_ROM];
 	MemoryRange& ramRange = banks[BANK_CRAM];
 
-	if (romRange.bank != NULL)
-		delete romRange.bank;
-
-	if (ramRange.bank != NULL)
-		delete ramRange.bank;
+	// TODO: make sure memory from previous cartridge is free'd
 
 	switch (cartridge.header->cartridgeHardware)
 	{
@@ -105,10 +101,10 @@ const Memory::MemoryRange* Memory::FindMemoryRange(uint16_t address) const
 	const MemoryRange& range = banks[bankIdx];
 
 	// If the address is in an unallocated range, return a reference to the null address
-	assert(address <= range.end);
+	//assert(address <= range.end);
 
 	// Make sure the range has a registered memory bank
-	assert(range.bank != NULL);
+	//assert(range.bank != NULL);
 
 	return &range;
 }

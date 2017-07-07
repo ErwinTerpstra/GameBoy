@@ -27,7 +27,7 @@
 #define GB_BG_MAP_0			0x9800
 #define GB_BG_MAP_1			0x9C00
 #define GB_TILE_DATA_0		0x8000
-#define GB_TILE_DATA_1		0x8800
+#define GB_TILE_DATA_1		0x9000
 
 #define GB_OAM				0xFE00
 #define GB_IO_REGISTERS		0xFF00
