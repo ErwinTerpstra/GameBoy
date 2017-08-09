@@ -144,6 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="audiooutput.h" />
     <ClInclude Include="inputmanager.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -158,6 +159,7 @@
     <ClInclude Include="Window\window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="audiooutput.cpp" />
     <ClCompile Include="inputmanager.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

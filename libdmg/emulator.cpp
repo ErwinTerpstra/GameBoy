@@ -58,7 +58,7 @@ void Emulator::Step()
 
 
 	// Delay next CPU instruction until we've caught up 
-	ticksUntilNextInstruction += (cpu.Ticks() - previousTicks);
+	ticksUntilNextInstruction += (uint32_t) (cpu.Ticks() - previousTicks);
 
 	// Update IO subsystems
 	video.Sync(ticks);

@@ -184,7 +184,7 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 
 	uint8_t tileBuffer[2];
 
-	bool signedTileIndices = tileDataAddress = GB_TILE_DATA_1;
+	bool signedTileIndices = tileDataAddress == GB_TILE_DATA_1;
 
 	for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
 	{
@@ -276,7 +276,7 @@ void Video::DrawSprites()
 
 			if (behindBackground)
 			{
-				color = GetPixel(x, scanline);
+				color = GetPixel((uint8_t) x, scanline);
 
 				if (color > 0)
 					continue;
@@ -296,7 +296,7 @@ void Video::DrawSprites()
 			if (color == 0)
 				continue;
 
-			SetPixel(x, scanline, color);
+			SetPixel((uint8_t) x, scanline, color);
 		}
 	}
 }

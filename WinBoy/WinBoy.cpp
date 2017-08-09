@@ -11,9 +11,10 @@
 #include "Window/color.h"
 
 #include "inputmanager.h"
+#include "audiooutput.h"
 
-//#define ROM_FILE "../roms/Tetris (World).gb"
-#define ROM_FILE "../roms/SuperMarioLand.gb"
+#define ROM_FILE "../roms/Tetris (World).gb"
+//#define ROM_FILE "../roms/SuperMarioLand.gb"
 
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
@@ -82,6 +83,7 @@ Input* input;
 Emulator* emulator;
 
 Window* window;
+AudioOutput audioOutput;
 
 GDIBufferAllocator* bufferAllocator;
 Buffer* frameBuffer;
@@ -92,7 +94,6 @@ int main()
 }
 
 void DrawFrameBuffer();
-
 
 void MemoryReadCallback(uint16_t address)
 {
@@ -133,6 +134,11 @@ void MemoryWriteCallback(uint16_t address)
 void VBlankCallback()
 {
 	//DrawFrameBuffer();
+	
+	HRESULT result = audioOutput.Update();
+
+	if (result != S_OK)
+		Debug::Print("[WinBoy]: Error updating audio output: 0x%04x\n", result);
 }
 
 void DrawFrameBuffer()
@@ -171,7 +177,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (error != 0)
 	{
-		Debug::Print("Failed to read ROM file: %s!\n", ROM_FILE);
+		Debug::Print("[WinBoy]: Failed to read ROM file: %s!\n", ROM_FILE);
 		return 1;
 	}
 
@@ -206,6 +212,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	window->Show(nCmdShow);
 
+	HRESULT result = audioOutput.Initialize();
+	if (result != S_OK)
+	{
+		Debug::Print("[WinBoy]: Error initializing audio output: 0x%04x\n", result);
+		return 1;
+	}
+
 	Video::Mode prevVideoMode = video->CurrentMode();
 	
 	LARGE_INTEGER timerFrequency;
@@ -234,22 +247,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			realTime = 0.0;
 		}
 
-		if (inputManager.GetKeyDown('1'))
+		if (inputManager.GetKey('L'))
 		{
-			video->SetLayerState(Video::LAYER_BACKGROUND, !video->GetLayerState(Video::LAYER_BACKGROUND));
-			Debug::Print("[WinBoy]: Background layer %s\n", video->GetLayerState(Video::LAYER_BACKGROUND) ? "enabled" : "disabled");
-		}
+			if (inputManager.GetKeyDown('1'))
+			{
+				video->SetLayerState(Video::LAYER_BACKGROUND, !video->GetLayerState(Video::LAYER_BACKGROUND));
+				Debug::Print("[WinBoy]: Background layer %s\n", video->GetLayerState(Video::LAYER_BACKGROUND) ? "enabled" : "disabled");
+			}
 
-		if (inputManager.GetKeyDown('2'))
-		{
-			video->SetLayerState(Video::LAYER_WINDOW, !video->GetLayerState(Video::LAYER_WINDOW));
-			Debug::Print("[WinBoy]: Window layer %s\n", video->GetLayerState(Video::LAYER_WINDOW) ? "enabled" : "disabled");
-		}
+			if (inputManager.GetKeyDown('2'))
+			{
+				video->SetLayerState(Video::LAYER_WINDOW, !video->GetLayerState(Video::LAYER_WINDOW));
+				Debug::Print("[WinBoy]: Window layer %s\n", video->GetLayerState(Video::LAYER_WINDOW) ? "enabled" : "disabled");
+			}
 
-		if (inputManager.GetKeyDown('3'))
-		{
-			video->SetLayerState(Video::LAYER_SPRITES, !video->GetLayerState(Video::LAYER_SPRITES));
-			Debug::Print("[WinBoy]: Sprite layer %s\n", video->GetLayerState(Video::LAYER_SPRITES) ? "enabled" : "disabled");
+			if (inputManager.GetKeyDown('3'))
+			{
+				video->SetLayerState(Video::LAYER_SPRITES, !video->GetLayerState(Video::LAYER_SPRITES));
+				Debug::Print("[WinBoy]: Sprite layer %s\n", video->GetLayerState(Video::LAYER_SPRITES) ? "enabled" : "disabled");
+			}
 		}
 
 		if (paused)
@@ -274,15 +290,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				emulator->PrintRegisters();
 			}
 
-			if (inputManager.GetKeyDown('V'))
+			if (inputManager.GetKey('V'))
 			{
-				for (uint16_t address = GB_TILE_DATA_0; address < GB_TILE_DATA_1; ++address)
-				{
-					uint8_t byte = memory->ReadByte(address);
-					Debug::Print("0x%02X ", byte);
+				uint16_t startAddress = 0, endAddress = 0;
 
-					if (address % 16 == 15)
-						Debug::Print("\n");
+				if (inputManager.GetKeyDown('1'))
+				{
+					startAddress = GB_BG_MAP_0;
+					endAddress = GB_BG_MAP_0 + 0x3FF;
+				}
+				else if (inputManager.GetKeyDown('2'))
+				{
+					startAddress = GB_BG_MAP_1;
+					endAddress = GB_BG_MAP_1 + 0x3FF;
+				}
+				
+				if (startAddress != 0)
+				{
+					for (uint16_t address = startAddress; address <= endAddress; ++address)
+					{
+						if (address % 16 == 0)
+							Debug::Print("0x%04X  ", address);
+
+						uint8_t byte = memory->ReadByte(address);
+						Debug::Print("0x%02X ", byte);
+
+						if (address % 16 == 15)
+							Debug::Print("\n");
+					}
 				}
 			}
 
@@ -370,6 +405,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		Sleep(1);
 	}
+
+	audioOutput.Finalize();
 
 	delete[] romBuffer;
 	delete[] memoryBuffer;
