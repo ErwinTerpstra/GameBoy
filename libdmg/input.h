@@ -3,12 +3,15 @@
 
 #include "environment.h"
 
+#include "memorypointer.h"
+#include "memorybank.h"
+
 namespace libdmg
 {
 	class CPU;
 	class Memory;
 
-	class Input
+	class Input : public MemoryBank
 	{
 	public:
 
@@ -31,17 +34,17 @@ namespace libdmg
 
 
 		CPU& cpu;
-		Memory& memory;
-
-		uint8_t* joypadRegister;
 
 		uint8_t buttons;
-	public:
-		Input(CPU& cpu, Memory& memory);
 
-		void Update();
+		uint8_t joypadRegister;
+	public:
+		Input(CPU& cpu);
 
 		void SetButtonState(Button button, bool state);
+
+		uint8_t ReadByte(uint16_t address) const;
+		void WriteByte(uint16_t address, uint8_t value);
 	};
 }
 

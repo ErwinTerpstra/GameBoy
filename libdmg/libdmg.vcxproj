@@ -173,6 +173,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="audio.h" />
     <ClInclude Include="cartridge.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="debug.h" />
@@ -185,19 +186,28 @@
     <ClInclude Include="memory.h" />
     <ClInclude Include="memorybank.h" />
     <ClInclude Include="memorybuffer.h" />
+    <ClInclude Include="memorypointer.h" />
+    <ClInclude Include="ringbuffer.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="video.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="audio.cpp" />
     <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="emulator.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="instructions.cpp" />
     <ClCompile Include="memory.cpp" />
+    <ClCompile Include="memorypointer.cpp" />
+    <ClCompile Include="ringbuffer.cpp" />
     <ClCompile Include="timer.cpp" />
+    <ClCompile Include="tonegenerator.cpp" />
     <ClCompile Include="video.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tonegenerator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

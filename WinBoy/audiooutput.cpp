@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "audiooutput.h"
+#include "debug.h"
 
 #include "libdmg.h"
 
 using namespace WinBoy;
+using namespace libdmg;
 
 #define EXIT_ON_ERROR(hres) \
 	if (FAILED(hres)) \
@@ -16,18 +18,22 @@ using namespace WinBoy;
 		(punk) = NULL; \
 	} \
 
-AudioOutput::AudioOutput() : enumerator(NULL), device(NULL), audioClient(NULL), renderClient(NULL), pwfx(NULL)
+AudioOutput::AudioOutput() : enumerator(NULL), device(NULL), audioClient(NULL), renderClient(NULL),
+	volume(NULL), waveFormat(NULL), waveFormatExtensible(NULL)
 {
 
 }
 
 AudioOutput::~AudioOutput()
 {
-	CoTaskMemFree(pwfx);
+	if (waveFormat != NULL)
+		CoTaskMemFree(waveFormat);
+
 	SAFE_RELEASE(enumerator);
 	SAFE_RELEASE(device);
 	SAFE_RELEASE(audioClient);
 	SAFE_RELEASE(renderClient);
+	SAFE_RELEASE(volume);
 }
 
 HRESULT AudioOutput::Initialize()
@@ -43,19 +49,47 @@ HRESULT AudioOutput::Initialize()
 	hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&audioClient);
 	EXIT_ON_ERROR(hr);
 
-	WAVEFORMATEX waveFormat = { };
-	waveFormat.wFormatTag = WAVE_FORMAT_PCM;
-	waveFormat.nChannels = 2;
-	waveFormat.nSamplesPerSec = OUTPUT_FREQUENCY;
-	waveFormat.nAvgBytesPerSec = OUTPUT_FREQUENCY * 4;
-	waveFormat.nBlockAlign = 4;
-	waveFormat.wBitsPerSample = 16;
-
-	hr = audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &waveFormat, NULL);
+	hr = audioClient->GetMixFormat(&waveFormat);
 	EXIT_ON_ERROR(hr);
 
-	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, 0, 4096 * 100, 0, &waveFormat, NULL);
+	waveFormat = (WAVEFORMATEX*)CoTaskMemAlloc(sizeof(WAVEFORMATEX));
+
+	waveFormat->wFormatTag = WAVE_FORMAT_PCM;
+	waveFormat->cbSize = sizeof(WAVEFORMATEX);
+	waveFormat->nChannels = 2;
+	waveFormat->nSamplesPerSec = 48000;
+	waveFormat->wBitsPerSample = 16;
+
+	waveFormat->nBlockAlign = waveFormat->wBitsPerSample / 8 * waveFormat->nChannels;
+	waveFormat->nAvgBytesPerSec = waveFormat->wBitsPerSample / 8 * waveFormat->nChannels * waveFormat->nSamplesPerSec;
+
+#ifdef USE_EXCLUSIVE_MODE
+	hr = audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, waveFormat, NULL);
 	EXIT_ON_ERROR(hr);
+
+	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, 0, 1024 * 1000 * 10, 0, waveFormat, NULL);
+	EXIT_ON_ERROR(hr);
+#else
+	WAVEFORMATEX* fallbackFormat = NULL;
+
+	hr = audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, waveFormat, &fallbackFormat);
+	EXIT_ON_ERROR(hr);
+
+	if (hr == S_FALSE)
+	{
+		CoTaskMemFree(waveFormat);
+		waveFormat = fallbackFormat;
+	}
+
+	if (waveFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+	{
+		waveFormatExtensible = (WAVEFORMATEXTENSIBLE*)waveFormat;
+		Debug::Print("[AudioOutput]: Using extended wave format\n");
+	}
+
+	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, 1024 * 1000 * 10, 0, waveFormat, NULL);
+	EXIT_ON_ERROR(hr);
+#endif
 
 	// Get the actual size of the allocated buffer.
 	hr = audioClient->GetBufferSize(&bufferFrameCount);
@@ -63,7 +97,13 @@ HRESULT AudioOutput::Initialize()
 
 	hr = audioClient->GetService(IID_IAudioRenderClient, (void**)&renderClient);
 	EXIT_ON_ERROR(hr);
-	
+
+	hr = audioClient->GetService(IID_IAudioStreamVolume, (void**)&volume);
+	EXIT_ON_ERROR(hr);
+
+	for (uint32_t channel = 0; channel < waveFormat->nChannels; ++channel)
+		volume->SetChannelVolume(channel, 1.0f);
+
 	// Start playing.
 	hr = audioClient->Start();
 	EXIT_ON_ERROR(hr);
@@ -109,24 +149,47 @@ HRESULT AudioOutput::Finalize()
 }
 
 #define PI 3.14159265359f
-#define FREQUENCY 100
+#define FREQUENCY 440
 #define VOLUME 0.1f
 
 HRESULT AudioOutput::LoadData(UINT32 numFrames, BYTE* data, DWORD* flags)
 {
 	static uint32_t phase = 0;
-	uint16_t* buffer = (uint16_t*)data;
+
+	uint8_t bytesPerSample = waveFormat->wBitsPerSample / 8;
 
 	for (uint32_t frameIdx = 0; frameIdx < numFrames; ++frameIdx, ++phase)
 	{
-		float x = 0.5f + (sinf((phase / (float) OUTPUT_FREQUENCY) * FREQUENCY * PI * 2) * VOLUME * 0.5f);
-		uint16_t sample = (uint16_t) (x * ((1 << 16) - 1));
+		float sample = 0.5f + (sinf((phase / (float) waveFormat->nSamplesPerSec) * FREQUENCY * PI * 2) * VOLUME * 0.5f);
 		
-		WRITE_SHORT(buffer + (frameIdx * 2) + 0, sample);
-		WRITE_SHORT(buffer + (frameIdx * 2) + 1, sample);
+		for (uint32_t channel = 0; channel < waveFormat->nChannels; ++channel)
+		{
+			BYTE* buffer = data + (frameIdx * waveFormat->nChannels * bytesPerSample) + (channel * bytesPerSample);
+			
+			switch (waveFormat->wBitsPerSample)
+			{
+				case 8:
+					WriteSample<8>(sample, buffer);
+					break;
+				case 16:
+					WriteSample<16>(sample, buffer);
+					break;
+				case 32:
+					if (waveFormatExtensible != NULL && waveFormatExtensible->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+						*((float*)buffer) = (sample - 0.5f) * 2.0f;
+					else
+						WriteSample<32>(sample, buffer);
+
+					break;
+				default:
+					assert(false);
+					break;
+			}
+		}
+
 	}
 
 	*flags = numFrames == 0 ? AUDCLNT_BUFFERFLAGS_SILENT : 0;
 
-	return NO_ERROR;
+	return S_OK;
 }

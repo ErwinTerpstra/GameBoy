@@ -2,6 +2,7 @@
 #define _GAME_BOY_H_
 
 #define GB_CLOCK_FREQUENCY			4194304
+#define GB_SOUND_CLOCK_FREQUENCY	512
 
 #define GB_SCREEN_WIDTH				160
 #define GB_SCREEN_HEIGHT			144
@@ -24,6 +25,10 @@
 
 #define GB_MAX_SPRITES				40
 
+#define GB_ROM				0x0000
+#define GB_CRAM				0xA000
+#define GB_VRAM				0x8000
+
 #define GB_BG_MAP_0			0x9800
 #define GB_BG_MAP_1			0x9C00
 #define GB_TILE_DATA_0		0x8000
@@ -39,6 +44,34 @@
 #define GB_REG_TIMA			0xFF05			// Timer counter
 #define GB_REG_TMA			0xFF06			// Timer modulo
 #define GB_REG_TAC			0xFF07			// Timer control
+
+#define GB_REG_NR10			0xFF10
+#define GB_REG_NR11			0xFF11
+#define GB_REG_NR12			0xFF12
+#define GB_REG_NR13			0xFF13
+#define GB_REG_NR14			0xFF14
+
+#define GB_REG_NR21			0xFF16
+#define GB_REG_NR22			0xFF17
+#define GB_REG_NR23			0xFF18
+#define GB_REG_NR24			0xFF19
+
+#define GB_REG_NR30			0xFF1A
+#define GB_REG_NR31			0xFF1B
+#define GB_REG_NR32			0xFF1C
+#define GB_REG_NR33			0xFF1D
+#define GB_REG_NR34			0xFF1E
+
+#define GB_REG_NR41			0xFF20
+#define GB_REG_NR42			0xFF21
+#define GB_REG_NR43			0xFF22
+#define GB_REG_NR44			0xFF23
+
+#define GB_REG_NR50			0xFF24
+#define GB_REG_NR51			0xFF25
+#define GB_REG_NR52			0xFF26
+
+#define GB_REG_WAVE			0xFF30
 
 #define GB_REG_LCDC			0xFF40			// LCD control
 #define GB_REG_STAT			0xFF41			// LCD status

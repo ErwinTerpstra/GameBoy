@@ -25,20 +25,10 @@ namespace libdmg
 
 			}
 
-			const uint8_t* RetrievePointer(uint16_t address) const 
-			{
-				const uint8_t* bank = GetBank(address > 0x4000 ? mbc.selectedROMBank : 0);
-				return bank + (address % 0x4000);
-			}
-
 			uint8_t ReadByte(uint16_t address) const
 			{
-				return *RetrievePointer(address); 
-			
-			}
-			uint16_t ReadShort(uint16_t address) const
-			{
-				return DECODE_SHORT(RetrievePointer(address)); 
+				const uint8_t* bank = GetBank(address > 0x4000 ? mbc.selectedROMBank : 0);
+				return *(bank + (address % 0x4000));
 			}
 
 			void WriteByte(uint16_t address, uint8_t value)
@@ -98,11 +88,6 @@ namespace libdmg
 				}
 			}
 
-			void WriteShort(uint16_t address, uint16_t value)
-			{
-				WriteByte(address, value & 0xFF);
-			}
-
 		private:
 			const uint8_t* GetBank(uint16_t bank) const { return mbc.cartridge.rom + (0x4000 * bank); }
 
@@ -130,21 +115,12 @@ namespace libdmg
 					delete[] buffer;
 			}
 
-			const uint8_t* RetrievePointer(uint16_t address) const { return GetCurrentBank() + address; }
-
 			uint8_t ReadByte(uint16_t address) const { return GetCurrentBank()[address]; }
-			uint16_t ReadShort(uint16_t address) const { return DECODE_SHORT(GetCurrentBank() + address); }
 
 			void WriteByte(uint16_t address, uint8_t value)
 			{
 				assert(mbc.ramEnabled);
 				WRITE_BYTE(GetCurrentBank() + address, value); 
-			}
-
-			void WriteShort(uint16_t address, uint16_t value) 
-			{
-				assert(mbc.ramEnabled);
-				WRITE_SHORT(GetCurrentBank() + address, value); 
 			}
 
 		private:

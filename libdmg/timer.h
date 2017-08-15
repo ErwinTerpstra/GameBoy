@@ -3,6 +3,8 @@
 
 #include "environment.h"
 
+#include "memorypointer.h"
+
 namespace libdmg
 {
 	class CPU;
@@ -19,8 +21,10 @@ namespace libdmg
 
 		uint64_t ticks;
 
-		uint8_t* divRegister;
-		uint8_t* timerCounterRegister;
+		MemoryPointer divRegister;
+		MemoryPointer timerCounterRegister;
+		MemoryPointer timerControlRegister;
+		MemoryPointer timerModuloRegister;
 
 		uint16_t divRegisterCycles;
 		uint16_t timerCycles;

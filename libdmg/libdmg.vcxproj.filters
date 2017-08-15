@@ -24,6 +24,15 @@
     <ClInclude Include="mbc1.h">
       <Filter>memory</Filter>
     </ClInclude>
+    <ClInclude Include="audio.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="ringbuffer.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="memorypointer.h">
+      <Filter>memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />
@@ -36,10 +45,30 @@
     <ClCompile Include="memory.cpp">
       <Filter>memory</Filter>
     </ClCompile>
+    <ClCompile Include="audio.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="tonegenerator.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="ringbuffer.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="memorypointer.cpp">
+      <Filter>memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="memory">
       <UniqueIdentifier>{7802465e-8413-4c23-94df-7ff3768b663c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="audio">
+      <UniqueIdentifier>{838cb663-b0cf-4cf6-989b-bff1048a640e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tonegenerator.h">
+      <Filter>audio</Filter>
+    </None>
   </ItemGroup>
 </Project>

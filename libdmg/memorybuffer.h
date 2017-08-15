@@ -30,13 +30,8 @@ namespace libdmg
 				delete[] buffer;
 		}
 
-		const uint8_t* RetrievePointer(uint16_t address) const { return buffer + address;  }
-
-		uint8_t ReadByte(uint16_t address) const { return buffer[address]; }
-		uint16_t ReadShort(uint16_t address) const { return DECODE_SHORT(buffer + address); }
-
-		void WriteByte(uint16_t address, uint8_t value) { WRITE_BYTE(buffer + address, value); }
-		void WriteShort(uint16_t address, uint16_t value) { WRITE_SHORT(buffer + address, value); }
+		DMG_FORCE_INLINE uint8_t ReadByte(uint16_t address) const { return buffer[address]; }
+		DMG_FORCE_INLINE void WriteByte(uint16_t address, uint8_t value) { WRITE_BYTE(buffer + address, value); }
 
 
 	};

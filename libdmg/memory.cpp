@@ -26,22 +26,42 @@ Memory::Memory() : MemoryWriteCallback(NULL)
 
 	MemoryBuffer* naBuffer		= new MemoryBuffer(0x5F);
 
-	banks[BANK_ROM]		= { 0x0000, 0x7FFF, NULL };
-	banks[BANK_VRAM]	= { 0x8000, 0x9FFF, vramBuffer };
-	banks[BANK_CRAM]	= { 0xA000, 0xBFFF, NULL };
-	banks[BANK_WRAM]	= { 0xC000, 0xDFFF, wramBuffer };
-	banks[BANK_ECHO]	= { 0xE000, 0xFDFF, wramBuffer };
-	banks[BANK_OAM]		= { 0xFE00, 0xFE9F, oamBuffer };
-	banks[BANK_NA]		= { 0xFEA0, 0xFEFF, naBuffer };
-	banks[BANK_IO]		= { 0xFF00, 0xFF7F, ioBuffer };
-	banks[BANK_HRAM]	= { 0xFF80, 0xFFFE, hramBuffer };
-	banks[BANK_IE]		= { 0xFFFF, 0xFFFF, ieBuffer };
+	banks = new MemoryRange[MEMORY_BANK_COUNT];
+
+	uint8_t currentBank = 0;
+	banks[currentBank++] = { 0x0000, 0x7FFF, NULL };
+	banks[currentBank++] = { 0x8000, 0x9FFF, vramBuffer };
+	banks[currentBank++] = { 0xA000, 0xBFFF, NULL };
+	banks[currentBank++] = { 0xC000, 0xDFFF, wramBuffer };
+	banks[currentBank++] = { 0xE000, 0xFDFF, wramBuffer };
+	banks[currentBank++] = { 0xFE00, 0xFE9F, oamBuffer };
+	banks[currentBank++] = { 0xFEA0, 0xFEFF, naBuffer };
+	banks[currentBank++] = { 0xFF00, 0xFF00, NULL };
+	banks[currentBank++] = { 0xFF01, 0xFF7F, ioBuffer };
+	banks[currentBank++] = { 0xFF80, 0xFFFE, hramBuffer };
+	banks[currentBank++] = { 0xFFFF, 0xFFFF, ieBuffer };
+
+	assert(currentBank == MEMORY_BANK_COUNT);
+}
+
+Memory::~Memory()
+{
+	if (banks != NULL)
+	{
+		delete[] banks;
+		banks = NULL;
+	}
+}
+
+void Memory::BindIO(MemoryBank* input)
+{
+	FindMemoryRange(GB_REG_JOYP)->bank = input;
 }
 
 void Memory::BindCatridge(Cartridge& cartridge)
 {
-	MemoryRange& romRange = banks[BANK_ROM];
-	MemoryRange& ramRange = banks[BANK_CRAM];
+	MemoryRange* romRange = FindMemoryRange(GB_ROM);
+	MemoryRange* ramRange = FindMemoryRange(GB_CRAM);
 
 	// TODO: make sure memory from previous cartridge is free'd
 
@@ -49,18 +69,18 @@ void Memory::BindCatridge(Cartridge& cartridge)
 	{
 		case 0:	// 32KB ROM, no RAM
 		{
-			romRange.bank = new MemoryBuffer(&cartridge.rom[0]);
-			ramRange.bank = NULL;
+			romRange->bank = new MemoryBuffer(&cartridge.rom[0]);
+			ramRange->bank = NULL;
 			break;
 		}
 
 		case 1: // MBC1 ROM only
 		{
 			MBC1* mbc = new MBC1(cartridge);
-			romRange.bank = &mbc->rom;
+			romRange->bank = &mbc->rom;
 			
 			// TODO: MBC1 does not have RAM but games still write to this address space, replace with some sort of NULL ram
-			ramRange.bank = new MemoryBuffer(0x2000);
+			ramRange->bank = new MemoryBuffer(0x2000);
 			break;
 		}
 
@@ -68,8 +88,8 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		case 3:
 		{
 			MBC1* mbc = new MBC1(cartridge);
-			romRange.bank = &mbc->rom;
-			ramRange.bank = &mbc->ram;
+			romRange->bank = &mbc->rom;
+			ramRange->bank = &mbc->ram;
 			break;
 		}
 
@@ -79,38 +99,28 @@ void Memory::BindCatridge(Cartridge& cartridge)
 	}
 }
 
-const uint8_t* Memory::RetrievePointer(uint16_t address) const
-{
-	const MemoryRange* range = FindMemoryRange(address);
-	return range->bank->RetrievePointer(address - range->start);
-}
-
 const Memory::MemoryRange* Memory::FindMemoryRange(uint16_t address) const
 {
-	uint8_t bankIdx =
-		(address >= banks[BANK_VRAM].start) +
-		(address >= banks[BANK_CRAM].start) +
-		(address >= banks[BANK_WRAM].start) +
-		(address >= banks[BANK_ECHO].start) +
-		(address >= banks[BANK_OAM].start) +
-		(address >= banks[BANK_NA].start) +
-		(address >= banks[BANK_IO].start) +
-		(address >= banks[BANK_HRAM].start) +
-		(address >= banks[BANK_IE].start);
+	uint8_t bankIdx = 0;
+	while (banks[bankIdx].end < address)
+		++bankIdx;
 
-	const MemoryRange& range = banks[bankIdx];
+	const MemoryRange* range = &banks[bankIdx];
 
-	// If the address is in an unallocated range, return a reference to the null address
-	//assert(address <= range.end);
+	// Make sure the address is in an allocated range
+	//assert(address >= range.start);
 
 	// Make sure the range has a registered memory bank
 	//assert(range.bank != NULL);
 
-	return &range;
+	return range;
 }
 
 void Memory::WriteByte(uint16_t address, uint8_t value)
 {
+	if (MemoryWriteCallback != NULL)
+		MemoryWriteCallback(address);
+
 	if (address == GB_REG_DMA)
 	{
 		Copy(value << 8, GB_OAM, 0x9F);
@@ -120,9 +130,6 @@ void Memory::WriteByte(uint16_t address, uint8_t value)
 		MemoryRange* range = FindMemoryRange(address);
 		range->bank->WriteByte(address - range->start, value);
 	}
-
-	if (MemoryWriteCallback != NULL)
-		MemoryWriteCallback(address);
 }
 
 void Memory::WriteShort(uint16_t address, uint16_t value)
@@ -134,7 +141,8 @@ void Memory::WriteShort(uint16_t address, uint16_t value)
 	}
 
 	MemoryRange* range = FindMemoryRange(address);
-	range->bank->WriteShort(address - range->start, value);
+	range->bank->WriteByte(address - range->start + 0, value & 0xFF);
+	range->bank->WriteByte(address - range->start + 1, value >> 8);
 }
 
 void Memory::WriteBuffer(const uint8_t* srcBuffer, uint16_t startAddress, uint16_t size)
@@ -167,7 +175,11 @@ uint16_t Memory::ReadShort(uint16_t address) const
 	}
 
 	const MemoryRange* range = FindMemoryRange(address);
-	return range->bank->ReadShort(address - range->start);
+	uint16_t result;
+	result = range->bank->ReadByte(address - range->start + 0);
+	result |= range->bank->ReadByte(address - range->start + 1) << 8;
+
+	return result;
 }
 
 void Memory::Read(uint16_t address, uint8_t& value) const
@@ -178,4 +190,10 @@ void Memory::Read(uint16_t address, uint8_t& value) const
 void Memory::Read(uint16_t address, uint16_t& value) const
 {
 	value = ReadShort(address);
+}
+
+void Memory::ReadBuffer(uint8_t* buffer, uint16_t address, uint16_t length) const
+{
+	for (uint8_t offset = 0; offset < length; ++offset)
+		buffer[offset] = ReadByte(address + offset);
 }

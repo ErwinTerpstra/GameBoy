@@ -10,10 +10,11 @@ using namespace libdmg;
 const uint16_t Timer::DIV_REGISTER_DIVIDER = 256;
 const uint16_t Timer::TIMER_DIVIDERS[] = { 1024, 16, 64, 256 };
 
-Timer::Timer(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory)
+Timer::Timer(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory), 
+	divRegister(memory, GB_REG_DIV), timerCounterRegister(memory, GB_REG_TIMA), timerControlRegister(memory, GB_REG_TAC),
+	timerModuloRegister(memory, GB_REG_TMA)
 {
-	divRegister = memory.RetrievePointer(GB_REG_DIV);
-	timerCounterRegister = memory.RetrievePointer(GB_REG_TIMA);
+
 }
 
 void Timer::Reset()
@@ -36,12 +37,12 @@ void Timer::PerformCycle()
 	// DIV register
 	if (++divRegisterCycles == DIV_REGISTER_DIVIDER)
 	{
-		++(*divRegister);
+		divRegister = *divRegister + 1;
 		divRegisterCycles = 0;
 	}
 
 	// Timer
-	uint8_t timerControl = memory.ReadByte(GB_REG_TAC);
+	uint8_t timerControl = *timerControlRegister;
 	uint16_t timerDivider = TIMER_DIVIDERS[timerControl & 0x3];
 
 	// Check if the timer is enabled
@@ -51,10 +52,11 @@ void Timer::PerformCycle()
 		if (++timerCycles == timerDivider)
 		{
 			// Increment the counter register and check if it overflowed
-			if (++(*timerCounterRegister) == 0)
+			timerCounterRegister = *timerCounterRegister + 1;
+			if (*timerCounterRegister == 0)
 			{
 				// Reset the counter to the timer modulo value
-				*timerCounterRegister = memory.ReadByte(GB_REG_TMA); 
+				timerCounterRegister = *timerModuloRegister;
 
 				// Request the timer interrupt
 				cpu.RequestInterrupt(CPU::INT_TIMER);

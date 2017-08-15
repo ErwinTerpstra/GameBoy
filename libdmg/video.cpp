@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "memory.h"
+#include "memorybank.h"
 
 #include "gameboy.h"
 
@@ -13,14 +14,17 @@ using namespace libdmg;
 Video::Video(CPU& cpu, Memory& memory, uint8_t* videoBuffer) :
 	VBlankCallback(NULL),
 	cpu(cpu), memory(memory), videoBuffer(videoBuffer),
-	scanline(0), ticks(0), modeTicks(0), currentMode(MODE_VBLANK)
+	scanline(0), ticks(0), modeTicks(0), currentMode(MODE_VBLANK),
+	lcdControlRegister(memory, GB_REG_LCDC), statRegister(memory, GB_REG_STAT),
+	paletteRegister(memory, GB_REG_BGP), 
+	scanlineRegister(memory, GB_REG_LY), scanlineCompareRegister(memory, GB_REG_LYC)
 {
-	lcdControlRegister = memory.RetrievePointer(GB_REG_LCDC);
-	statRegister = memory.RetrievePointer(GB_REG_STAT);
-
 	layerStates[LAYER_BACKGROUND] = true;
 	layerStates[LAYER_WINDOW] = true;
 	layerStates[LAYER_SPRITES] = true;
+
+	Memory::MemoryRange* memoryRange = memory.FindMemoryRange(GB_VRAM);
+	vram = memoryRange->bank;
 }
 
 void Video::Reset()
@@ -33,8 +37,6 @@ void Video::Reset()
 
 void Video::Sync(const uint64_t& targetTicks)
 {
-	//const uint64_t& targetTicks = cpu.Ticks();
-	
 	while (ticks < targetTicks)
 		Step();
 }
@@ -149,12 +151,11 @@ void Video::DrawLine()
 	{
 		uint16_t bgMapAddress = READ_BIT(*lcdControlRegister, LCDC_BG_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
 		uint16_t bgTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
-		uint8_t bgPalette = memory.ReadByte(GB_REG_BGP);
 
 		uint8_t scrollX = memory.ReadByte(GB_REG_SCX);
 		uint8_t scrollY = memory.ReadByte(GB_REG_SCY);
 
-		DrawMap(bgMapAddress, bgTileDataAddresss, bgPalette, scrollX, scrollY);
+		DrawMap(bgMapAddress, bgTileDataAddresss, *paletteRegister, scrollX, scrollY);
 	}
 	else
 		memset(videoBuffer + scanline * GB_SCREEN_WIDTH / 4, 0x00, GB_SCREEN_WIDTH / 4);
@@ -164,12 +165,11 @@ void Video::DrawLine()
 	{
 		uint16_t windowMapAddress = READ_BIT(*lcdControlRegister, LCDC_WINDOW_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
 		uint16_t windowTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
-		uint8_t windowPalette = memory.ReadByte(GB_REG_BGP);
 
 		uint8_t scrollX = memory.ReadByte(GB_REG_WX);
 		uint8_t scrollY = memory.ReadByte(GB_REG_WY);
 
-		DrawMap(windowMapAddress, windowMapAddress, windowPalette, scrollX, scrollY);
+		DrawMap(windowMapAddress, windowMapAddress, *paletteRegister, 0, 0);
 	}
 
 	if (layerStates[LAYER_SPRITES] && READ_BIT(*lcdControlRegister, LCDC_SPRITE_ENABLE))
@@ -192,7 +192,7 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 		uint8_t tileX = mapX / GB_TILE_WIDTH;
 
 		// Read the index of the tile to use for this pixel
-		uint8_t tileIdx = memory.ReadByte(mapAddress + tileY * (GB_BG_WIDTH / GB_TILE_WIDTH) + tileX);
+		uint8_t tileIdx = vram->ReadByte(mapAddress - GB_VRAM + tileY * (GB_BG_WIDTH / GB_TILE_WIDTH) + tileX);
 	
 		uint8_t tileLocalX = mapX % GB_TILE_WIDTH;
 
@@ -221,13 +221,16 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 
 void Video::DrawSprites()
 {
-	const Sprite* sprite = reinterpret_cast<Sprite*>(memory.RetrievePointer(GB_OAM));
+	uint8_t spriteBuffer[sizeof(Sprite)];
+	const Sprite* sprite = (Sprite*)&spriteBuffer[0];
 
 	bool doubleSize = READ_BIT(*lcdControlRegister, LCDC_SPRITE_SIZE);
 	uint8_t height = GB_TILE_HEIGHT << (doubleSize ? 1 : 0);
 
-	for (uint8_t spriteIdx = 0; spriteIdx < GB_MAX_SPRITES; ++spriteIdx, ++sprite)
+	for (uint8_t spriteIdx = 0; spriteIdx < GB_MAX_SPRITES; ++spriteIdx)
 	{
+		memory.ReadBuffer(&spriteBuffer[0], GB_OAM + spriteIdx * sizeof(Sprite), sizeof(Sprite));
+
 		int16_t minY = sprite->y - (GB_TILE_HEIGHT << 1);
 		int16_t maxY = minY + height - 1;
 
@@ -309,8 +312,8 @@ void Video::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
 
 void Video::DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t* tileBuffer)
 {
-	uint8_t lowerByte = memory.ReadByte(tileAddress + (tileY << 1) + 0);
-	uint8_t upperByte = memory.ReadByte(tileAddress + (tileY << 1) + 1);
+	uint8_t lowerByte = vram->ReadByte(tileAddress - GB_VRAM + (tileY << 1) + 0);
+	uint8_t upperByte = vram->ReadByte(tileAddress - GB_VRAM + (tileY << 1) + 1);
 
 	uint8_t leftByte = 0;
 	uint8_t rightByte = 0;
@@ -337,10 +340,10 @@ void Video::SwitchMode(Mode mode)
 	modeTicks = 0;
 
 	// Clear the mode bits
-	*statRegister &= 0xFC;
+	statRegister = (*statRegister & 0xFC);
 
 	// Write the new mode
-	*statRegister |= mode;
+	statRegister = (*statRegister | mode);
 
 	switch (mode)
 	{
@@ -375,14 +378,14 @@ void Video::SetScanline(uint8_t scanline)
 	this->scanline = scanline;
 
 	// Write the new scan line to the LY register
-	memory.WriteByte(GB_REG_LY, scanline);
+	scanlineRegister = scanline;
 
 	// If the new scanline matches the value in the LYC register, trigger the STAT interrupt
-	if (scanline == memory.ReadByte(GB_REG_LYC))
+	if (scanline == *scanlineCompareRegister)
 	{
 		if (READ_BIT(*statRegister, STAT_LYC_INTERRUPT))
 			cpu.RequestInterrupt(CPU::INT_LCD_STAT);
 
-		*statRegister = SET_BIT(*statRegister, STAT_LYC_COINCEDENCE);
+		statRegister = SET_BIT(*statRegister, STAT_LYC_COINCEDENCE);
 	}
 }

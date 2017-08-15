@@ -78,6 +78,7 @@ Memory* memory;
 CPU* cpu;
 Cartridge* cartridge;
 Video* video;
+Audio* audio;
 Input* input;
 
 Emulator* emulator;
@@ -191,13 +192,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	cpu = new CPU(*memory);
 	cartridge = new Cartridge(romBuffer);
 	video = new Video(*cpu, *memory, videoBuffer);
-	input = new Input(*cpu, *memory);
+	audio = new Audio(*memory);
+	input = new Input(*cpu);
 
 	memory->MemoryWriteCallback = MemoryWriteCallback;
 	memory->MemoryReadCallback = MemoryReadCallback;
 	video->VBlankCallback = VBlankCallback;
 
-	emulator = new Emulator(*cpu, *memory, *cartridge, *video, *input);
+	emulator = new Emulator(*cpu, *memory, *cartridge, *video, *audio, *input);
 	emulator->Boot();
 
 	InputManager& inputManager = InputManager::Instance();

@@ -8,25 +8,9 @@
 
 using namespace libdmg;
 
-Input::Input(CPU& cpu, Memory& memory) : cpu(cpu), memory(memory), buttons(0)
+Input::Input(CPU& cpu) : cpu(cpu), buttons(0)
 {
-	joypadRegister = memory.RetrievePointer(GB_REG_JOYP);
-}
 
-void Input::Update()
-{
-	uint8_t joypad = 0xC0;
-
-	if (!READ_BIT(*joypadRegister, BUTTONS_BIT))
-		joypad |= ~(buttons >> 4) & 0x0F;
-	else if (!READ_BIT(*joypadRegister, DPAD_BIT))
-		joypad |= ~(buttons & 0x0F) & 0x0F;
-	else
-		joypad |= 0x0F;
-
-	joypad |= (*joypadRegister & 0x30);
-
-	*joypadRegister = joypad;
 }
 
 void Input::SetButtonState(Button button, bool state)
@@ -37,4 +21,23 @@ void Input::SetButtonState(Button button, bool state)
 
 	if (state && !READ_BIT(prevState, button))
 		cpu.RequestInterrupt(CPU::INT_JOYPAD);
+}
+
+uint8_t Input::ReadByte(uint16_t address) const
+{
+	return joypadRegister;
+}
+
+void Input::WriteByte(uint16_t address, uint8_t value)
+{
+	joypadRegister = 0xC0;
+
+	if (!READ_BIT(value, BUTTONS_BIT))
+		joypadRegister |= ~(buttons >> 4) & 0x0F;
+	else if (!READ_BIT(value, DPAD_BIT))
+		joypadRegister |= ~(buttons & 0x0F) & 0x0F;
+	else
+		joypadRegister |= 0x0F;
+
+	joypadRegister |= (value & 0x30);
 }

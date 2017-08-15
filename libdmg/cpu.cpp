@@ -3,6 +3,7 @@
 #include "gameboy.h"
 
 #include "memory.h"
+#include "memorypointer.h"
 
 #include "debug.h"
 
@@ -10,10 +11,16 @@ using namespace libdmg;
 
 const uint16_t CPU::INTERRUPT_VECTORS[] = { 0x40, 0x48, 0x50, 0x58, 0x60 };
 
-CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory)
+CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), interruptEnable(memory, GB_REG_IE), interruptFlags(memory, GB_REG_IF)
 {
-	interruptEnableRegister = memory.RetrievePointer(GB_REG_IE);
-	interruptFlagRegister = memory.RetrievePointer(GB_REG_IF);
+	nativePointer = (NativePointer*) malloc(sizeof(NativePointer));
+	memoryPointer = (MemoryPointer*) malloc(sizeof(MemoryPointer));
+}
+
+CPU::~CPU()
+{
+	free(nativePointer);
+	free(memoryPointer);
 }
 
 void CPU::Reset()
@@ -96,14 +103,15 @@ const CPU::Instruction& CPU::ExecuteNextInstruction()
 		return instruction;
 	}
 
-	// Retrieve a pointer to where the operands for this instruction are location
-	const uint8_t* operands = memory.RetrievePointer(registers.pc + 1);
+	// Read all operands for this instruction into a small buffer
+	uint8_t operandBuffer[4];
+	memory.ReadBuffer(&operandBuffer[0], registers.pc + 1, instruction.length - 1);
 
-	// Increate the PC to point to the next instruction
+	// Increase the PC to point to the next instruction
 	registers.pc += instruction.length;
 
 	// Execute the instruction
-	(this->*instruction.handler)(opcode, operands);
+	(this->*instruction.handler)(opcode, &operandBuffer[0]);
 
 	// Increase the clock cycle count
 	ticks += instruction.duration;
@@ -116,10 +124,17 @@ void CPU::TestInterrupts()
 {
 	if (interruptMasterEnable)
 	{
+		uint8_t interruptState = *interruptEnable & *interruptFlags;
+
 		for (uint8_t interrupt = 0; interrupt <= INT_JOYPAD; ++interrupt)
 		{
-			if (TestInterrupt((Interrupt)interrupt))
+			// To execute an interrupt, the following conditions have to be met:
+			// 1) The interrupt master enable flag must be set
+			// 2) The interrupt must be enabled in the IE register
+			// 3) The interrupt must be requested in the IF register
+			if (interruptMasterEnable && (interruptState & (1 << interrupt)))
 			{
+				ExecuteInterrupt((Interrupt) interrupt);
 				halted = false;
 				break;
 			}
@@ -130,28 +145,13 @@ void CPU::TestInterrupts()
 void CPU::RequestInterrupt(Interrupt interrupt)
 {
 	// Set the flag in the IF register
-	*interruptFlagRegister |= (1 << interrupt);
-}
-
-bool CPU::TestInterrupt(Interrupt interrupt)
-{
-	// To execute an interrupt, the following conditions have to be met:
-	// 1) The interrupt master enable flag must be set
-	// 2) The interrupt must be enabled in the IE register
-	// 3) The interrupt must be requested in the IF register
-	if (interruptMasterEnable && (*interruptEnableRegister & *interruptFlagRegister & (1 << interrupt)))
-	{
-		ExecuteInterrupt(interrupt);
-		return true;
-	}
-
-	return false;
+	interruptFlags = *interruptFlags | (1 << interrupt);
 }
 
 void CPU::ExecuteInterrupt(Interrupt interrupt)
 {
 	// Clear the flag in the IF register
-	*interruptFlagRegister &= ~(1 << interrupt);
+	interruptFlags = *interruptFlags & ~(1 << interrupt);
 
 	interruptMasterEnable = false;
 
@@ -162,6 +162,16 @@ void CPU::ExecuteInterrupt(Interrupt interrupt)
 	registers.pc = INTERRUPT_VECTORS[interrupt];
 
 	ticks += GB_ISR_DURATION;
+}
+
+NativePointer* CPU::CreateNativePointer(uint8_t* ptr)
+{
+	return new (nativePointer) NativePointer(ptr);
+}
+
+MemoryPointer* CPU::CreateMemoryPointer(uint16_t address)
+{
+	return new (memoryPointer) MemoryPointer(memory, address);
 }
 
 uint8_t CPU::ReadStackByte()
@@ -209,19 +219,19 @@ uint8_t CPU::ReadSourceValue(uint8_t opcode, const uint8_t* operands) const
 
 }
 
-uint8_t* CPU::GetSourcePointer(uint8_t opcode)
+Pointer* CPU::GetSourcePointer(uint8_t opcode)
 {
 	switch (opcode % 8)
 	{
-		case 0x0: return &registers.b;
-		case 0x1: return &registers.c;
-		case 0x2: return &registers.d;
-		case 0x3: return &registers.e;
-		case 0x4: return &registers.h;
-		case 0x5: return &registers.l;
-		case 0x7: return &registers.a;
+		case 0x0: return CreateNativePointer(&registers.b);
+		case 0x1: return CreateNativePointer(&registers.c);
+		case 0x2: return CreateNativePointer(&registers.d);
+		case 0x3: return CreateNativePointer(&registers.e);
+		case 0x4: return CreateNativePointer(&registers.h);
+		case 0x5: return CreateNativePointer(&registers.l);
+		case 0x7: return CreateNativePointer(&registers.a);
 
-		case 0x6: return memory.RetrievePointer(registers.hl);
+		case 0x6: return CreateMemoryPointer(registers.hl);
 	}
 }
 
@@ -485,53 +495,53 @@ void CPU::alu_cmp(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* target = NULL;
+	Pointer* target = NULL;
 
 	switch (opcode)
 	{
-		case 0x04: target = &registers.b; break;
-		case 0x0C: target = &registers.c; break;
-		case 0x14: target = &registers.d; break;
-		case 0x1C: target = &registers.e; break;
-		case 0x24: target = &registers.h; break;
-		case 0x2C: target = &registers.l; break;
-		case 0x3C: target = &registers.a; break;
+		case 0x04: target = CreateNativePointer(&registers.b); break;
+		case 0x0C: target = CreateNativePointer(&registers.c); break;
+		case 0x14: target = CreateNativePointer(&registers.d); break;
+		case 0x1C: target = CreateNativePointer(&registers.e); break;
+		case 0x24: target = CreateNativePointer(&registers.h); break;
+		case 0x2C: target = CreateNativePointer(&registers.l); break;
+		case 0x3C: target = CreateNativePointer(&registers.a); break;
 
-		case 0x34: target = memory.RetrievePointer(registers.hl); break;
+		case 0x34: target = CreateMemoryPointer(registers.hl); break;
 	}
 
-	uint8_t value = *target;
+	uint8_t value = **target;
 	*target = value + 1;
 
-	SetFlag(FLAG_ZERO, *target == 0);
+	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
+	SetFlag(FLAG_HALF_CARRY, (**target ^ value) & 0x10);
 }
 
 void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* target = NULL;
+	Pointer* target = NULL;
 
 	switch (opcode)
 	{
-		case 0x05: target = &registers.b; break;
-		case 0x0D: target = &registers.c; break;
-		case 0x15: target = &registers.d; break;
-		case 0x1D: target = &registers.e; break;
-		case 0x25: target = &registers.h; break;
-		case 0x2D: target = &registers.l; break;
-		case 0x3D: target = &registers.a; break;
+		case 0x05: target = CreateNativePointer(&registers.b); break;
+		case 0x0D: target = CreateNativePointer(&registers.c); break;
+		case 0x15: target = CreateNativePointer(&registers.d); break;
+		case 0x1D: target = CreateNativePointer(&registers.e); break;
+		case 0x25: target = CreateNativePointer(&registers.h); break;
+		case 0x2D: target = CreateNativePointer(&registers.l); break;
+		case 0x3D: target = CreateNativePointer(&registers.a); break;
 
-		case 0x35: target = memory.RetrievePointer(registers.hl); break;
+		case 0x35: target = CreateMemoryPointer(registers.hl); break;
 	}
 
-	uint8_t value = *target;
+	uint8_t value = **target;
 
 	*target = value - 1;
 
-	SetFlag(FLAG_ZERO, *target == 0);
+	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, (*target ^ value) & 0x10);
+	SetFlag(FLAG_HALF_CARRY, (**target ^ value) & 0x10);
 }
 
 void CPU::alu_complement(uint8_t opcode, const uint8_t* operands)
@@ -801,9 +811,9 @@ void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* opera
 
 void CPU::rotate_left(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit7 = READ_BIT(*value, 7);
-	*value = ((*value << 1) | READ_MASK(registers.f, FLAG_CARRY));
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(**value, 7);
+	*value = ((**value << 1) | READ_MASK(registers.f, FLAG_CARRY));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
@@ -812,9 +822,9 @@ void CPU::rotate_left(uint8_t opcode, const uint8_t* operands)
 
 void CPU::rotate_right(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit0 = READ_BIT(*value, 0);
-	*value = ((*value >> 1) | (READ_MASK(registers.f, FLAG_CARRY) << 7));
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(**value, 0);
+	*value = ((**value >> 1) | (READ_MASK(registers.f, FLAG_CARRY) << 7));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
@@ -823,9 +833,9 @@ void CPU::rotate_right(uint8_t opcode, const uint8_t* operands)
 
 void CPU::rotate_left_circular(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit7 = READ_BIT(*value, 7);
-	*value = ((*value << 1) | bit7);
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(**value, 7);
+	*value = ((**value << 1) | bit7);
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
@@ -834,9 +844,9 @@ void CPU::rotate_left_circular(uint8_t opcode, const uint8_t* operands)
 
 void CPU::rotate_right_circular(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit0 = READ_BIT(*value, 0);
-	*value = ((*value >> 1) | (bit0 << 7));
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(**value, 0);
+	*value = ((**value >> 1) | (bit0 << 7));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
@@ -845,11 +855,11 @@ void CPU::rotate_right_circular(uint8_t opcode, const uint8_t* operands)
 
 void CPU::shift_left_arithmetically(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit7 = READ_BIT(*value, 7);
-	*value = *value << 1;
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(**value, 7);
+	*value = **value << 1;
 
-	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
@@ -857,12 +867,12 @@ void CPU::shift_left_arithmetically(uint8_t opcode, const uint8_t* operands)
 
 void CPU::shift_right_arithmetically(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit7 = READ_BIT(*value, 7);
-	uint8_t bit0 = READ_BIT(*value, 0);
-	*value = SET_BIT_IF(*value >> 1, 7, bit7);
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit7 = READ_BIT(**value, 7);
+	uint8_t bit0 = READ_BIT(**value, 0);
+	*value = SET_BIT_IF(**value >> 1, 7, bit7);
 
-	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
@@ -870,11 +880,11 @@ void CPU::shift_right_arithmetically(uint8_t opcode, const uint8_t* operands)
 
 void CPU::shift_right_logically(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	uint8_t bit0 = READ_BIT(*value, 0);
-	*value = *value >> 1;
+	Pointer* value = GetSourcePointer(opcode);
+	uint8_t bit0 = READ_BIT(**value, 0);
+	*value = **value >> 1;
 
-	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
@@ -882,10 +892,10 @@ void CPU::shift_right_logically(uint8_t opcode, const uint8_t* operands)
 
 void CPU::swap(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
-	*value = (*value << 4) | (*value >> 4);
+	Pointer* value = GetSourcePointer(opcode);
+	*value = (**value << 4) | (**value >> 4);
 
-	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, *value == 0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 	registers.f = UNSET_MASK(registers.f, FLAG_CARRY);
@@ -893,10 +903,10 @@ void CPU::swap(uint8_t opcode, const uint8_t* operands)
 
 void CPU::test_bit(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
+	Pointer* value = GetSourcePointer(opcode);
 
 	uint8_t bit = (opcode - 0x40) / 8;
-	uint8_t result = READ_BIT(*value, bit);
+	uint8_t result = READ_BIT(**value, bit);
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, result == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
@@ -905,16 +915,16 @@ void CPU::test_bit(uint8_t opcode, const uint8_t* operands)
 
 void CPU::reset_bit(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
+	Pointer* value = GetSourcePointer(opcode);
 
 	uint8_t bit = (opcode - 0x80) / 8;
-	*value = UNSET_BIT(*value, bit);
+	*value = UNSET_BIT(**value, bit);
 }
 
 void CPU::set_bit(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t* value = GetSourcePointer(opcode);
+	Pointer* value = GetSourcePointer(opcode);
 
 	uint8_t bit = (opcode - 0xC0) / 8;
-	*value = SET_BIT(*value, bit);
+	*value = SET_BIT(**value, bit);
 }

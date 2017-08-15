@@ -6,9 +6,14 @@
 
 #include "timer.h"
 
+#include "memorypointer.h"
+
 namespace libdmg
 {
 	class Memory;
+
+	class Pointer;
+	class NativePointer;
 
 	class CPU
 	{
@@ -90,11 +95,15 @@ namespace libdmg
 		bool interruptMasterEnable;
 		bool halted;
 
-		uint8_t* interruptFlagRegister;
-		uint8_t* interruptEnableRegister;
+		NativePointer* nativePointer;
+		MemoryPointer* memoryPointer;
+
+		MemoryPointer interruptEnable;
+		MemoryPointer interruptFlags;
 
 	public:
 		CPU(Memory& memory);
+		~CPU();
 		
 		void Reset();
 		
@@ -110,7 +119,9 @@ namespace libdmg
 		const uint64_t& Ticks() const { return ticks; }
 	
 	private:
-		bool TestInterrupt(Interrupt interrupt);
+		NativePointer* CreateNativePointer(uint8_t* ptr);
+		MemoryPointer* CreateMemoryPointer(uint16_t address);
+
 		void ExecuteInterrupt(Interrupt interrupt);
 
 		// Flag register manipulation
@@ -126,7 +137,7 @@ namespace libdmg
 
 		/* Memory read/writing */
 		uint8_t ReadSourceValue(uint8_t opcode, const uint8_t* operands) const;
-		uint8_t* GetSourcePointer(uint8_t opcode);
+		Pointer* GetSourcePointer(uint8_t opcode);
 		
 		/* ALU utilities */
 

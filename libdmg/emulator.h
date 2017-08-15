@@ -10,6 +10,7 @@ namespace libdmg
 	class Memory;
 	class Cartridge;
 	class Video;
+	class Audio;
 	class Input;
 
 	class Emulator
@@ -19,6 +20,7 @@ namespace libdmg
 		Memory& memory;
 		Cartridge& cartridge;
 		Video& video;
+		Audio& audio;
 		Input& input;
 
 	private:
@@ -33,7 +35,7 @@ namespace libdmg
 		uint64_t ticks;
 		uint32_t ticksUntilNextInstruction;
 	public:
-		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input);
+		Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Audio& audio, Input& input);
 		
 		void Boot();
 

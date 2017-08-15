@@ -4,6 +4,7 @@
 #include "environment.h"
 
 #include "memorybank.h"
+#include "memorypointer.h"
 
 namespace libdmg
 {
@@ -11,23 +12,8 @@ namespace libdmg
 
 	class Memory
 	{
-
 	public:
-		enum MemoryBanks
-		{
-			BANK_ROM,
-			BANK_VRAM,
-			BANK_CRAM,
-			BANK_WRAM,
-			BANK_ECHO,
-			BANK_OAM,
-			BANK_NA,
-			BANK_IO,
-			BANK_HRAM,
-			BANK_IE,
-
-			BANK_COUNT
-		};
+		static const uint8_t MEMORY_BANK_COUNT = 11;
 
 		struct MemoryRange
 		{
@@ -40,20 +26,20 @@ namespace libdmg
 
 	private:
 		
-		MemoryRange banks[BANK_COUNT];
+		MemoryRange* banks;
 
 	public:
 
 		Memory();
+		~Memory();
 
+		void BindIO(MemoryBank* input);
 		void BindCatridge(Cartridge& cartridge);
 
-		uint8_t* RetrievePointer(uint16_t address)
+		MemoryPointer RetrievePointer(uint16_t address)
 		{
-			return const_cast<uint8_t*>(static_cast<const Memory*>(this)->RetrievePointer(address));
+			return MemoryPointer(*this, address);
 		}
-
-		const uint8_t* RetrievePointer(uint16_t address) const;
 
 		void WriteByte(uint16_t address, uint8_t value);
 		void WriteShort(uint16_t address, uint16_t value);
@@ -66,8 +52,9 @@ namespace libdmg
 
 		void Read(uint16_t address, uint8_t& value) const;
 		void Read(uint16_t address, uint16_t& value) const;
+		
+		void ReadBuffer(uint8_t* buffer, uint16_t address, uint16_t length) const;
 
-	private:
 		MemoryRange* FindMemoryRange(uint16_t address)
 		{
 			return const_cast<MemoryRange*>(static_cast<const Memory*>(this)->FindMemoryRange(address)); 

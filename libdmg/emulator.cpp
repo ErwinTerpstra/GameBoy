@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "cartridge.h"
 #include "video.h"
+#include "audio.h"
 #include "input.h"
 
 #include "gameboy.h"
@@ -12,11 +13,11 @@
 
 using namespace libdmg;
 
-Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Input& input) : 
-	cpu(cpu), memory(memory), cartridge(cartridge), video(video), input(input),
+Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Audio& audio, Input& input) : 
+	cpu(cpu), memory(memory), cartridge(cartridge), video(video), audio(audio), input(input),
 	ticks(0), ticksUntilNextInstruction(0), historyIdx(0), historyLength(0)
 {
-
+	memory.BindIO(&input);
 }
 
 void Emulator::Boot()
@@ -37,6 +38,7 @@ void Emulator::Boot()
 	// Reset IO subsystems
 	cpu.Reset();
 	video.Reset();
+	audio.Reset();
 }
 
 void Emulator::Step()
@@ -48,10 +50,18 @@ void Emulator::Step()
 	if (!cpu.Halted())
 	{
 		if (ticksUntilNextInstruction == 0)
+		{
+			// If the CPU is not halted, test interrupts after executing an instruction
 			ExecuteNextInstruction();
+			cpu.TestInterrupts();
+		}
 	}
-	
-	cpu.TestInterrupts();
+	else
+	{
+		// If the CPU is halted, test for interrupts every cycle
+		// This could probably be done less often, or have the RequestInterrupt function wakeup the CPU
+		cpu.TestInterrupts();
+	}
 
 	if (ticksUntilNextInstruction > 0)
 		--ticksUntilNextInstruction;
@@ -62,7 +72,7 @@ void Emulator::Step()
 
 	// Update IO subsystems
 	video.Sync(ticks);
-	input.Update();
+	audio.Sync(ticks);
 }
 
 void Emulator::ExecuteNextInstruction()

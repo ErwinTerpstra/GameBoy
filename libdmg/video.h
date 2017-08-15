@@ -2,11 +2,13 @@
 #define _VIDEO_CONTROLLER_H_
 
 #include "environment.h"
+#include "memorypointer.h"
 
 namespace libdmg
 {
 	class CPU;
 	class Memory;
+	class MemoryBank;
 
 	class Video
 	{
@@ -72,8 +74,13 @@ namespace libdmg
 
 		uint8_t* videoBuffer;
 
-		uint8_t* lcdControlRegister;
-		uint8_t* statRegister;
+		MemoryPointer lcdControlRegister;
+		MemoryPointer statRegister;
+		MemoryPointer paletteRegister;
+		MemoryPointer scanlineRegister;
+		MemoryPointer scanlineCompareRegister;
+
+		MemoryBank* vram;
 
 		uint8_t scanline;
 		uint64_t ticks;
