@@ -17,7 +17,7 @@ Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video,
 	cpu(cpu), memory(memory), cartridge(cartridge), video(video), audio(audio), input(input),
 	ticks(0), ticksUntilNextInstruction(0), historyIdx(0), historyLength(0)
 {
-	memory.BindIO(&input);
+	memory.BindIO(&input, audio.Sound1(), audio.Sound2());
 }
 
 void Emulator::Boot()

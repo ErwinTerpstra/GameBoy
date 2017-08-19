@@ -114,6 +114,7 @@ namespace libdmg
 
 		void DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer);
 		void DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t* tileBuffer);
+		void DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t tileX, uint8_t& tilePixel);
 
 		void SwitchMode(Mode mode);
 		void SetScanline(uint8_t scanline);

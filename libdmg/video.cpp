@@ -182,8 +182,6 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 	uint8_t tileY = mapY / GB_TILE_HEIGHT;
 	uint8_t tileLocalY = mapY % GB_TILE_HEIGHT;
 
-	uint8_t tileBuffer[2];
-
 	bool signedTileIndices = tileDataAddress == GB_TILE_DATA_1;
 
 	for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
@@ -203,17 +201,11 @@ void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palet
 		else
 			tileAddress += GB_TILE_SIZE * tileIdx;
 
-		DecodeTile(tileAddress, tileLocalY, tileBuffer);
-
-		// Read the tile data byte
-		uint8_t tileData = tileBuffer[tileLocalX / 4];
-		uint8_t tileBit = (tileLocalX % 4) << 1;
-
-		// Retrieve the palette color index from the 4 pixel byte
-		uint8_t paletteColorIdx = (tileData >> tileBit) & 0x03;
+		uint8_t tilePixel;
+		DecodeTile(tileAddress, tileLocalY, tileLocalX, tilePixel);
 
 		// Retrieve the color from the palette
-		uint8_t color = (palette >> (paletteColorIdx << 1)) & 0x03;
+		uint8_t color = (palette >> (tilePixel << 1)) & 0x03;
 		
 		SetPixel(x, scanline, color);
 	}
@@ -312,8 +304,9 @@ void Video::DecodeTile(uint16_t tileAddress, uint8_t* tileBuffer)
 
 void Video::DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t* tileBuffer)
 {
-	uint8_t lowerByte = vram->ReadByte(tileAddress - GB_VRAM + (tileY << 1) + 0);
-	uint8_t upperByte = vram->ReadByte(tileAddress - GB_VRAM + (tileY << 1) + 1);
+	tileAddress = tileAddress - GB_VRAM + (tileY << 1);
+	uint8_t lowerByte = vram->ReadByte(tileAddress + 0);
+	uint8_t upperByte = vram->ReadByte(tileAddress + 1);
 
 	uint8_t leftByte = 0;
 	uint8_t rightByte = 0;
@@ -322,16 +315,21 @@ void Video::DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t* tileBuffer)
 	{
 		leftByte |= READ_BIT(lowerByte, 7 - pixel) << ((pixel << 1) + 0);
 		leftByte |= READ_BIT(upperByte, 7 - pixel) << ((pixel << 1) + 1);
-	}
 
-	for (uint8_t pixel = 0; pixel < 4; ++pixel)
-	{
 		rightByte |= READ_BIT(lowerByte, 3 - pixel) << ((pixel << 1) + 0);
 		rightByte |= READ_BIT(upperByte, 3 - pixel) << ((pixel << 1) + 1);
 	}
 
 	tileBuffer[0] = leftByte;
 	tileBuffer[1] = rightByte;
+}
+void Video::DecodeTile(uint16_t tileAddress, uint8_t tileY, uint8_t tileX, uint8_t& tilePixel)
+{
+	tileAddress = tileAddress - GB_VRAM + (tileY << 1);
+	uint8_t lowerByte = vram->ReadByte(tileAddress + 0);
+	uint8_t upperByte = vram->ReadByte(tileAddress + 1);
+
+	tilePixel = (READ_BIT(upperByte, 7 - tileX) << 1) | (READ_BIT(lowerByte, 7 - tileX));
 }
 
 void Video::SwitchMode(Mode mode)

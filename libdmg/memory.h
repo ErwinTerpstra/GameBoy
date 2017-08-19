@@ -33,7 +33,7 @@ namespace libdmg
 		Memory();
 		~Memory();
 
-		void BindIO(MemoryBank* input);
+		void BindIO(MemoryBank* input, MemoryBank* sound1, MemoryBank* sound2);
 		void BindCatridge(Cartridge& cartridge);
 
 		MemoryPointer RetrievePointer(uint16_t address)

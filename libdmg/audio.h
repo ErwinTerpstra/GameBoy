@@ -26,6 +26,9 @@ namespace libdmg
 		void Reset();
 		void Sync(const uint64_t& targetTicks);
 
+		ToneGenerator* Sound1() { return &sound1; }
+		ToneGenerator* Sound2() { return &sound2; }
+
 	private:
 		void Step();
 		void StepFrameSequencer();

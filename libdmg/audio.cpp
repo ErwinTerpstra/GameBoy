@@ -8,8 +8,7 @@
 using namespace libdmg;
 
 Audio::Audio(Memory& memory) : memory(memory),
-	sound1(memory, GB_REG_NR10, GB_REG_NR11, GB_REG_NR12, GB_REG_NR13, GB_REG_NR14),
-	sound2(memory,           0, GB_REG_NR21, GB_REG_NR22, GB_REG_NR23, GB_REG_NR24),
+	sound1(memory), sound2(memory),
 	ticks(0), frameSequencerTicks(0)
 {
 
@@ -29,7 +28,7 @@ void Audio::Sync(const uint64_t& targetTicks)
 
 void Audio::Step()
 {
-	if ((((uint32_t) ticks) % (GB_CLOCK_FREQUENCY / GB_SOUND_CLOCK_FREQUENCY)) == 0)
+	if ((((uint32_t) ticks) % (GB_CLOCK_FREQUENCY / GB_SOUND_CLOCK_PERIOD)) == 0)
 		StepFrameSequencer();
 
 	++ticks;
@@ -42,6 +41,15 @@ void Audio::StepFrameSequencer()
 		sound1.StepLengthClock();
 		sound2.StepLengthClock();
 	}
+
+	if ((frameSequencerTicks % 8) == 7)
+	{
+		sound1.StepVolumeEnvelope();
+		sound2.StepVolumeEnvelope();
+	}
+
+	if ((frameSequencerTicks % 4) == 2)
+		sound1.StepSweep();
 	
 	// Update the state register
 	uint8_t state = memory.ReadByte(GB_REG_NR52) & 0xF0;
