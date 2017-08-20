@@ -84,7 +84,7 @@ Input* input;
 Emulator* emulator;
 
 Window* window;
-AudioOutput audioOutput;
+AudioOutput* audioOutput;
 
 GDIBufferAllocator* bufferAllocator;
 Buffer* frameBuffer;
@@ -136,7 +136,7 @@ void VBlankCallback()
 {
 	//DrawFrameBuffer();
 	
-	HRESULT result = audioOutput.Update();
+	HRESULT result = audioOutput->Update();
 
 	if (result != S_OK)
 		Debug::Print("[WinBoy]: Error updating audio output: 0x%04x\n", result);
@@ -214,7 +214,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	window->Show(nCmdShow);
 
-	HRESULT result = audioOutput.Initialize();
+	audioOutput = new AudioOutput(*audio);
+	HRESULT result = audioOutput->Initialize();
 	if (result != S_OK)
 	{
 		Debug::Print("[WinBoy]: Error initializing audio output: 0x%04x\n", result);
@@ -408,7 +409,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Sleep(1);
 	}
 
-	audioOutput.Finalize();
+	audioOutput->Finalize();
 
 	delete[] romBuffer;
 	delete[] memoryBuffer;

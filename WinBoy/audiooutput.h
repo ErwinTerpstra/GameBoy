@@ -9,6 +9,8 @@
 
 //#define USE_EXCLUSIVE_MODE
 
+using namespace libdmg;
+
 namespace WinBoy
 {
 	class AudioOutput
@@ -32,8 +34,10 @@ namespace WinBoy
 
 		UINT32 bufferFrameCount;
 
+		Audio& audio;
+
 	public:
-		AudioOutput();
+		AudioOutput(Audio& audio);
 		~AudioOutput();
 
 		HRESULT Initialize();
@@ -42,6 +46,9 @@ namespace WinBoy
 
 	private:
 		HRESULT LoadData(UINT32 numFrames, BYTE* data, DWORD* flags);
+		HRESULT LoadSine(UINT32 numFrames, BYTE* data, DWORD* flags);
+
+		void WriteSample(float sample, WORD bitsPerSample, BYTE* buffer);
 
 		template<uint32_t bitsPerSample>
 		void WriteSample(float sample, BYTE* buffer);

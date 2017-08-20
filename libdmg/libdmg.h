@@ -11,6 +11,7 @@
 #include "video.h"
 #include "audio.h"
 #include "input.h"
+#include "ringbuffer.h"
 
 #include "emulator.h"
 

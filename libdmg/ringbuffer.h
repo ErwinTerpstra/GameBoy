@@ -27,7 +27,7 @@ namespace libdmg
 		bool Full() const { return full; }
 
 		uint16_t Size() const { return size; }
-		uint16_t Length() const { return full ? size : (writeOffset - readOffset); }
+		uint16_t Length() const;
 	};
 }
 

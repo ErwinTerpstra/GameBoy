@@ -13,7 +13,7 @@ namespace libdmg
 	class Memory
 	{
 	public:
-		static const uint8_t MEMORY_BANK_COUNT = 11;
+		static const uint8_t MEMORY_BANK_COUNT = 14;
 
 		struct MemoryRange
 		{

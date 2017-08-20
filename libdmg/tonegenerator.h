@@ -12,14 +12,16 @@ namespace libdmg
 	class ToneGenerator : public MemoryBank
 	{
 	private:
-		Memory& memory;
-
+		bool hasSweep;
 		bool enabled;
 		bool sweepEnabled;
 		bool lengthCounterEnabled;
 
-		uint8_t lengthCounter;
+
 		uint8_t wavePatternDuty;
+		uint8_t wavePatternIndex;
+
+		uint8_t lengthCounter;
 
 		uint8_t sweepTimer;
 		uint8_t sweepPeriod;
@@ -35,21 +37,28 @@ namespace libdmg
 
 		uint16_t frequency;
 		uint16_t shadowFrequency;
+		uint16_t frequencyTimer;
 
 	public:
-		ToneGenerator(Memory& memory);
+		ToneGenerator(bool hasSweep);
+
+		uint8_t ReadByte(uint16_t address) const;
+		void WriteByte(uint16_t address, uint8_t value);
+
+		void StepFrequency();
 
 		void StepSweep();
 		void StepLengthClock();
 		void StepVolumeEnvelope();
 
-		void RestartSweep();
-		void UpdateSweepFrequency(bool saveFrequency);
-
-		uint8_t ReadByte(uint16_t address) const;
-		void WriteByte(uint16_t address, uint8_t value);
+		uint8_t GetOutput() const;
+		uint8_t GetVolume() const;
 
 		bool Enabled() const { return enabled; }
+
+	private:
+		void RestartSweep();
+		void UpdateSweepFrequency(bool saveFrequency);
 	};
 }
 

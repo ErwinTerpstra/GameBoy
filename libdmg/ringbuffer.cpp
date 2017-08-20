@@ -41,3 +41,14 @@ void RingBuffer::WriteByte(uint8_t value)
 	else
 		full = (writeOffset == readOffset);
 }
+
+uint16_t RingBuffer::Length() const
+{
+	if (full)
+		return size;
+
+	if (writeOffset < readOffset)
+		return (size - readOffset) + writeOffset;
+	else
+		return writeOffset - readOffset;
+}

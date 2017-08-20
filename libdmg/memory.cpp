@@ -21,7 +21,6 @@ Memory::Memory() : MemoryWriteCallback(NULL)
 
 	MemoryBuffer* oamBuffer		= new MemoryBuffer(0x9F);
 	MemoryBuffer* hramBuffer	= new MemoryBuffer(0xF1);
-	MemoryBuffer* ieBuffer		= new MemoryBuffer(0x01);
 
 	MemoryBuffer* naBuffer		= new MemoryBuffer(0x5F);
 
@@ -36,12 +35,12 @@ Memory::Memory() : MemoryWriteCallback(NULL)
 	banks[currentBank++] = { 0xFE00, 0xFE9F, oamBuffer };
 	banks[currentBank++] = { 0xFEA0, 0xFEFF, naBuffer };
 	banks[currentBank++] = { 0xFF00, 0xFF00, NULL };
-	banks[currentBank++] = { 0xFF01, 0xFF09, new MemoryBuffer(0x09) };
+	banks[currentBank++] = { 0xFF01, 0xFF0F, new MemoryBuffer(0x09) };
 	banks[currentBank++] = { 0xFF10, 0xFF14, NULL };
 	banks[currentBank++] = { 0xFF15, 0xFF19, NULL };
-	banks[currentBank++] = { 0xFF20, 0xFF79, new MemoryBuffer(0x60) };
+	banks[currentBank++] = { 0xFF1A, 0xFF7F, new MemoryBuffer(0x65) };
 	banks[currentBank++] = { 0xFF80, 0xFFFE, hramBuffer };
-	banks[currentBank++] = { 0xFFFF, 0xFFFF, ieBuffer };
+	banks[currentBank++] = { 0xFFFF, 0xFFFF, new MemoryBuffer(0x01) };
 
 	assert(currentBank == MEMORY_BANK_COUNT);
 }
@@ -59,7 +58,7 @@ void Memory::BindIO(MemoryBank* input, MemoryBank* sound1, MemoryBank* sound2)
 {
 	FindMemoryRange(GB_REG_JOYP)->bank = input;
 	FindMemoryRange(GB_REG_NR10)->bank = sound1;
-	FindMemoryRange(GB_REG_NR11)->bank = sound2;
+	FindMemoryRange(GB_REG_NR21)->bank = sound2;
 }
 
 void Memory::BindCatridge(Cartridge& cartridge)
@@ -112,10 +111,10 @@ const Memory::MemoryRange* Memory::FindMemoryRange(uint16_t address) const
 	const MemoryRange* range = &banks[bankIdx];
 
 	// Make sure the address is in an allocated range
-	//assert(address >= range.start);
+	assert(address >= range->start);
 
 	// Make sure the range has a registered memory bank
-	//assert(range.bank != NULL);
+	//assert(range->bank != NULL);
 
 	return range;
 }

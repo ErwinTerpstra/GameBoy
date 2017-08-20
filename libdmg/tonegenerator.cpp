@@ -3,16 +3,25 @@
 #include "util.h"
 #include "audio.h"
 #include "memory.h"
+#include "debug.h"
 
 using namespace libdmg;
 
-ToneGenerator::ToneGenerator(Memory& memory) :
-	memory(memory),
-	enabled(false), sweepEnabled(false), lengthCounterEnabled(false),
+const uint8_t WAVEFORMS[] = 
+{
+	0b00000001,
+	0b10000001,
+	0b10000111,
+	0b01111110
+};
+
+ToneGenerator::ToneGenerator(bool hasSweep) :
+	hasSweep(hasSweep), enabled(false), sweepEnabled(false), lengthCounterEnabled(false),
+	lengthCounter(0),
 	sweepTimer(0), sweepPeriod(0), sweepShift(0),
 	volume(0), volumeEnvelopeDirection(1), volumeEnvelopeTimer(0), volumeEnvelopePeriod(0),
-	wavePatternDuty(2), lengthCounter(0),
-	frequency(0), shadowFrequency(0)
+	wavePatternDuty(2), wavePatternIndex(0),
+	frequency(0), shadowFrequency(0), frequencyTimer(0)
 {
 
 }
@@ -43,6 +52,8 @@ void ToneGenerator::WriteByte(uint16_t address, uint8_t value)
 	switch (address)
 	{
 		case 0x00:
+			assert(hasSweep);
+
 			sweepPeriod = (value >> 4) & 0x03;
 			sweepDirection = READ_BIT(value, 3);
 			sweepShift = (value & 0x07);
@@ -99,6 +110,17 @@ void ToneGenerator::WriteByte(uint16_t address, uint8_t value)
 	}
 }
 
+void ToneGenerator::StepFrequency()
+{
+	--frequencyTimer;
+	
+	if (frequencyTimer == 0)
+	{
+		wavePatternIndex = (wavePatternIndex + 1) % 8;
+		frequencyTimer = (2048 - frequency) << 2;
+	}
+}
+
 void ToneGenerator::StepSweep()
 {
 	if (sweepEnabled && sweepPeriod != 0)
@@ -149,6 +171,17 @@ void ToneGenerator::StepVolumeEnvelope()
 			volumeEnvelopeTimer = volumeEnvelopePeriod;
 		}
 	}
+}
+
+
+uint8_t ToneGenerator::GetOutput() const
+{
+	return WAVEFORMS[wavePatternIndex];
+}
+
+uint8_t ToneGenerator::GetVolume() const
+{
+	return volume;
 }
 
 void ToneGenerator::RestartSweep()
