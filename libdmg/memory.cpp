@@ -70,26 +70,21 @@ void Memory::BindCatridge(Cartridge& cartridge)
 
 	switch (cartridge.header->cartridgeHardware)
 	{
-		case 0:	// 32KB ROM, no RAM
+		case 0:
 		{
+			printf("[Memory]: 32KB ROM, no RAM\n");
+
 			romRange->bank = new MemoryBuffer(&cartridge.rom[0]);
 			ramRange->bank = NULL;
 			break;
 		}
 
-		case 1: // MBC1 ROM only
-		{
-			MBC1* mbc = new MBC1(cartridge);
-			romRange->bank = &mbc->rom;
-			
-			// TODO: MBC1 does not have RAM but games still write to this address space, replace with some sort of NULL ram
-			ramRange->bank = new MemoryBuffer(0x2000);
-			break;
-		}
-
-		case 2: // MBC1 + RAM
+		// MBC1
+		case 1: 
+		case 2: 
 		case 3:
 		{
+			printf("[Memory]: MBC1: 2MB ROM 32KB RAM\n");
 			MBC1* mbc = new MBC1(cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;

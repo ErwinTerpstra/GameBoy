@@ -12,7 +12,7 @@ namespace libdmg
 	{
 
 	private:
-		const uint16_t BUFFER_SIZE = 1024 * 32;
+		const uint16_t BUFFER_SIZE = 0xFFFF;
 
 		Memory& memory;
 

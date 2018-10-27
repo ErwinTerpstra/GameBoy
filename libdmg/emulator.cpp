@@ -43,32 +43,45 @@ void Emulator::Boot()
 
 void Emulator::Step()
 {
+	uint64_t cpuTicks = cpu.Ticks();
+
+	do
+	{
+		Tick();
+	} while (cpu.Ticks() == cpuTicks);
+}
+
+void Emulator::Tick()
+{
 	++ticks;
 
-	uint64_t previousTicks = cpu.Ticks();
-
-	if (!cpu.Halted())
+	if (!cpu.Stopped())
 	{
-		if (ticksUntilNextInstruction == 0)
+		uint64_t previousTicks = cpu.Ticks();
+
+		if (!cpu.Halted())
 		{
-			// If the CPU is not halted, test interrupts after executing an instruction
-			ExecuteNextInstruction();
+			if (ticksUntilNextInstruction == 0)
+			{
+				// If the CPU is not halted, test interrupts after executing an instruction
+				ExecuteNextInstruction();
+				cpu.TestInterrupts();
+			}
+		}
+		else
+		{
+			// If the CPU is halted, test for interrupts every cycle
+			// This could probably be done less often, or have the RequestInterrupt function wakeup the CPU
 			cpu.TestInterrupts();
 		}
+
+		if (ticksUntilNextInstruction > 0)
+			--ticksUntilNextInstruction;
+
+
+		// Delay next CPU instruction until we've caught up 
+		ticksUntilNextInstruction += (uint32_t)(cpu.Ticks() - previousTicks);
 	}
-	else
-	{
-		// If the CPU is halted, test for interrupts every cycle
-		// This could probably be done less often, or have the RequestInterrupt function wakeup the CPU
-		cpu.TestInterrupts();
-	}
-
-	if (ticksUntilNextInstruction > 0)
-		--ticksUntilNextInstruction;
-
-
-	// Delay next CPU instruction until we've caught up 
-	ticksUntilNextInstruction += (uint32_t) (cpu.Ticks() - previousTicks);
 
 	// Update IO subsystems
 	video.Sync(ticks);

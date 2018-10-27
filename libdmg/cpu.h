@@ -94,6 +94,7 @@ namespace libdmg
 
 		bool interruptMasterEnable;
 		bool halted;
+		bool stopped;
 
 		NativePointer* nativePointer;
 		MemoryPointer* memoryPointer;
@@ -106,6 +107,7 @@ namespace libdmg
 		~CPU();
 		
 		void Reset();
+		void Resume();
 		
 		const Instruction& ExecuteNextInstruction();
 		void TestInterrupts();
@@ -114,6 +116,7 @@ namespace libdmg
 
 		bool InterruptMasterEnable() const { return interruptMasterEnable; }
 		bool Halted() const { return halted; }
+		bool Stopped() const { return stopped; }
 
 		const Registers& GetRegisters() const { return registers; }
 		const uint64_t& Ticks() const { return ticks; }
@@ -143,6 +146,7 @@ namespace libdmg
 
 		/* CPU control */
 		void nop(uint8_t opcode, const uint8_t* operands) { }
+		void stop(uint8_t opcode, const uint8_t* operands);
 		void halt(uint8_t opcode, const uint8_t* operands);
 		void enable_interupts(uint8_t opcode, const uint8_t* operands);
 		void disable_interrupts(uint8_t opcode, const uint8_t* operands);
@@ -163,6 +167,7 @@ namespace libdmg
 
 		/* 8-bit ALU */
 		void alu_add(uint8_t opcode, const uint8_t* operands);
+		void alu_add_sp_r8(uint8_t opcode, const uint8_t* operands);
 		void alu_adc(uint8_t opcode, const uint8_t* operands);
 		void alu_sub(uint8_t opcode, const uint8_t* operands);
 		void alu_sbc(uint8_t opcode, const uint8_t* operands);

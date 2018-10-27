@@ -39,6 +39,7 @@ namespace libdmg
 		
 		void Boot();
 
+		void Tick();
 		void Step();
 
 		void PrintRegisters() const;

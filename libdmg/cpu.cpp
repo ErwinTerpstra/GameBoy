@@ -72,6 +72,11 @@ void CPU::Reset()
 	timer.Reset();
 }
 
+void CPU::Resume()
+{
+	stopped = false;
+}
+
 const CPU::Instruction& CPU::ExecuteNextInstruction()
 {
 	// Sync the timer
@@ -245,6 +250,10 @@ void CPU::disable_interrupts(uint8_t opcode, const uint8_t* operands)
 	interruptMasterEnable = false;
 }
 
+void CPU::stop(uint8_t opcode, const uint8_t* operands)
+{
+	stopped = true;
+}
 
 void CPU::halt(uint8_t opcode, const uint8_t* operands)
 {
@@ -387,6 +396,7 @@ void CPU::adjust_bcd(uint8_t opcode, const uint8_t* operands)
 
 		if (value > 0x9F || GetFlag(FLAG_CARRY))
 			value += 0x60;
+
 	}
 
 	SetFlag(FLAG_ZERO, value == 0);
@@ -407,6 +417,19 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 	SetFlag(FLAG_CARRY, result < registers.a);
 
 	registers.a = result;
+}
+
+void CPU::alu_add_sp_r8(uint8_t opcode, const uint8_t* operands)
+{
+	uint8_t operand = operands[0];
+	uint16_t result = registers.sp + operand;
+
+	SetFlag(FLAG_ZERO, false);
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, (result ^ operand ^ registers.sp) & 0x10);
+	SetFlag(FLAG_CARRY, result < registers.sp);
+
+	registers.sp = result;
 }
 
 void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
@@ -722,7 +745,7 @@ void CPU::load_hl_to_sp(uint8_t opcode, const uint8_t* operands)
 
 void CPU::load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands)
 {
-	registers.hl = registers.sp + operands[0];
+	registers.hl = registers.sp + REINTERPRET(operands[0], int8_t);
 }
 
 void CPU::load_sp_to_memory(uint8_t opcode, const uint8_t* operands)
@@ -763,7 +786,11 @@ void CPU::pop_stack_16bit(uint8_t opcode, const uint8_t* operands)
 		case 0xC1: registers.bc = ReadStackShort(); break;
 		case 0xD1: registers.de = ReadStackShort(); break;
 		case 0xE1: registers.hl = ReadStackShort(); break;
-		case 0xF1: registers.af = ReadStackShort(); break;
+		
+		case 0xF1: 
+			// POP AF clears the lower nibble of the F register, which seems to be undocumented behaviour
+			registers.af = ReadStackShort() & 0xFFF0; 
+			break;
 
 		default: assert(false && "Invalid opcode for handler!");
 	}

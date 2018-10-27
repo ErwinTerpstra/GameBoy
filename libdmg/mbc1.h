@@ -27,7 +27,7 @@ namespace libdmg
 
 			uint8_t ReadByte(uint16_t address) const
 			{
-				const uint8_t* bank = GetBank(address > 0x4000 ? mbc.selectedROMBank : 0);
+				const uint8_t* bank = GetBank(address >= 0x4000 ? mbc.selectedROMBank : 0);
 				return *(bank + (address % 0x4000));
 			}
 

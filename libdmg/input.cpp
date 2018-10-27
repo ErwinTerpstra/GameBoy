@@ -20,7 +20,10 @@ void Input::SetButtonState(Button button, bool state)
 	buttons = SET_BIT_IF(buttons, button, state);
 
 	if (state && !READ_BIT(prevState, button))
+	{
 		cpu.RequestInterrupt(CPU::INT_JOYPAD);
+		cpu.Resume();
+	}
 }
 
 uint8_t Input::ReadByte(uint16_t address) const

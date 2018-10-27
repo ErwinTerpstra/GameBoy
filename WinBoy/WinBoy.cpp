@@ -13,11 +13,14 @@
 #include "inputmanager.h"
 #include "audiooutput.h"
 
-#define ROM_FILE "../roms/Tetris (World).gb"
+//#define ROM_FILE "../roms/Tetris (World).gb"
 //#define ROM_FILE "../roms/SuperMarioLand.gb"
 
-//#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
+#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
+#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
+//#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
@@ -36,27 +39,25 @@ const Color COLORS[] =
 
 uint16_t breakpoints[] =
 {
-	0x0104,
+	0x0000,
+	
+	//0xC34A,	// DAA test
+	0xC317,		// Timer test. This PC is hit repeatedly, but should only be hit once (as in bgb)
+	0xC324,
+	0xC329,
+	0xC32F,
 
-	//0x4000,
+	//0xC31A
+};
 
-	//0x14F1,
-	//0x1509,
-
-	//0x2B42
-
-	//0x0371
+uint8_t opcodeBreakpoints[] =
+{
+	0xF4
 };
 
 uint16_t memoryBreakpoints[] =
 {
-	0x0104,
-
-	//0xC203,
-	//0xC213,
-
-	//0xC000,		// DMA transfer source memory
-	//0xFF93,		// OAM source for first sprite in game type select: FF93, FF92, FF89
+	0x00,
 
 	//0xFF80,	// Current joypad state
 	//0xFF81,	// Changed joypad bits
@@ -363,7 +364,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			
 			do
 			{
-				emulator->Step();
+				emulator->Tick();
 				
 				// Calculate the time since boot for the CPU
 				emulatorTime = emulator->Ticks() / (double) GB_CLOCK_FREQUENCY;
@@ -388,6 +389,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							break;
 						}
 					}
+
+					uint8_t nextOpcode = memory->ReadByte(registers.pc);
+					for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(opcodeBreakpoints) / sizeof(uint8_t); ++breakpointIdx)
+					{
+						if (nextOpcode == opcodeBreakpoints[breakpointIdx])
+						{
+							Debug::Print("[WinBoy]: Opcode breakpoint hit for 0x%02X at 0x%04X\n", nextOpcode, registers.pc);
+							paused = true;
+							break;
+						}
+					}
+
 				}
 
 			} while (emulatorTime < realTime && !paused);

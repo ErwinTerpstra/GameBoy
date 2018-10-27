@@ -117,7 +117,6 @@ void Audio::SampleOutput()
 				S02 -= sound1.GetVolume() * S02Volume;
 		}
 
-		/*
 		if (sound2.Enabled() && READ_BIT(NR51, 1))
 		{
 			if (sound2.GetOutput())
@@ -133,11 +132,10 @@ void Audio::SampleOutput()
 			else
 				S02 -= sound2.GetVolume() * S02Volume;
 		}
-		*/
 
 		outputBuffer.WriteByte(S01);
 		outputBuffer.WriteByte(S02);
 
-		assert(!outputBuffer.Full());
+		//assert(!outputBuffer.Full());
 	}
 }

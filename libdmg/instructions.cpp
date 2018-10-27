@@ -21,7 +21,7 @@ const CPU::Instruction CPU::INSTRUCTION_MAP[] =
 	{ 0x0E, "LD C,0x%02X", 2, 8, &CPU::load_constant },
 	{ 0x0F, "RRCA", 1, 4, &CPU::rotate_accumulator_right_circular },
 
-	{ 0x10, "<Unkown>", 2, 4, NULL },
+	{ 0x10, "STOP", 2, 4, &CPU::stop },
 	{ 0x11, "LD DE,0x%04X", 3, 12, &CPU::load_constant_16bit },
 	{ 0x12, "LD (DE),A", 1, 8, &CPU::load_accumulator_to_memory },
 	{ 0x13, "INC DE", 1, 8, &CPU::alu_inc_16bit },
@@ -250,7 +250,7 @@ const CPU::Instruction CPU::INSTRUCTION_MAP[] =
 	{ 0xE5, "PUSH HL", 1, 16, &CPU::push_stack_16bit },
 	{ 0xE6, "AND 0x%02X", 2, 8, &CPU::alu_and },
 	{ 0xE7, "RST 20H", 1, 16, &CPU::restart },
-	{ 0xE8, "<Unkown>", 2, 16, NULL },
+	{ 0xE8, "ADD SP,0x%02X", 2, 16, &CPU::alu_add_sp_r8 },
 	{ 0xE9, "JP (HL)", 1, 4, &CPU::jump_to_hl },
 	{ 0xEA, "LD (0x%04X),A", 3, 16, &CPU::load_accumulator_to_memory_16bit },
 	{ 0xEB, "N/I", 0, 0, NULL },

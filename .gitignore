@@ -11,3 +11,6 @@ WinBoy/x64/
 WinBoy/Release/
 libdmg/Release/
 libdmg/FastDebug/
+WinBoy/.vs/
+WinBoy/UpgradeLog.htm
+*.vspx
