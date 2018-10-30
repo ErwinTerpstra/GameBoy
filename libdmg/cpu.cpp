@@ -11,7 +11,7 @@ using namespace libdmg;
 
 const uint16_t CPU::INTERRUPT_VECTORS[] = { 0x40, 0x48, 0x50, 0x58, 0x60 };
 
-CPU::CPU(Memory& memory) : memory(memory), timer(*this, memory), interruptEnable(memory, GB_REG_IE), interruptFlags(memory, GB_REG_IF)
+CPU::CPU(Memory& memory) : memory(memory), interruptEnable(memory, GB_REG_IE), interruptFlags(memory, GB_REG_IF)
 {
 	nativePointer = (NativePointer*) malloc(sizeof(NativePointer));
 	memoryPointer = (MemoryPointer*) malloc(sizeof(MemoryPointer));
@@ -68,8 +68,6 @@ void CPU::Reset()
 	memory.WriteByte(0xFF4A, 0x00); // WY
 	memory.WriteByte(0xFF4B, 0x00); // WX
 	memory.WriteByte(0xFFFF, 0x00); // IE
-
-	timer.Reset();
 }
 
 void CPU::Resume()
@@ -79,9 +77,6 @@ void CPU::Resume()
 
 const CPU::Instruction& CPU::ExecuteNextInstruction()
 {
-	// Sync the timer
-	timer.Sync();
-
 	// Read the opcode the PC points at
 	uint8_t opcode;
 	memory.Read(registers.pc, opcode);
@@ -140,7 +135,6 @@ void CPU::TestInterrupts()
 			if (interruptMasterEnable && (interruptState & (1 << interrupt)))
 			{
 				ExecuteInterrupt((Interrupt) interrupt);
-				halted = false;
 				break;
 			}
 		}
@@ -151,6 +145,7 @@ void CPU::RequestInterrupt(Interrupt interrupt)
 {
 	// Set the flag in the IF register
 	interruptFlags = *interruptFlags | (1 << interrupt);
+	halted = false;
 }
 
 void CPU::ExecuteInterrupt(Interrupt interrupt)
@@ -257,8 +252,7 @@ void CPU::stop(uint8_t opcode, const uint8_t* operands)
 
 void CPU::halt(uint8_t opcode, const uint8_t* operands)
 {
-	// Only halt if interrupts are enabled
-	halted = interruptMasterEnable;
+	halted = true;
 }
 
 void CPU::jump(uint8_t opcode, const uint8_t* operands)

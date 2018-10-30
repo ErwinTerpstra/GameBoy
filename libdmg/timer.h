@@ -33,7 +33,7 @@ namespace libdmg
 		Timer(CPU& cpu, Memory& memory);
 
 		void Reset();
-		void Sync();
+		void Sync(const uint64_t& targetTicks);
 		void PerformCycle();
 
 	};

@@ -5,6 +5,8 @@
 
 #include "cpu.h"
 
+#include "timer.h"
+
 namespace libdmg
 {
 	class Memory;
@@ -25,6 +27,8 @@ namespace libdmg
 
 	private:
 		static const uint8_t MAX_HISTORY_LENGTH = 10;
+
+		Timer timer;
 
 		uint16_t executionHistory[MAX_HISTORY_LENGTH];
 		uint16_t historyIdx;

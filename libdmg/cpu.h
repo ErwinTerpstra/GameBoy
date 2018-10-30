@@ -4,8 +4,6 @@
 #include "environment.h"
 #include "util.h"
 
-#include "timer.h"
-
 #include "memorypointer.h"
 
 namespace libdmg
@@ -87,8 +85,6 @@ namespace libdmg
 		Memory& memory;
 
 		Registers registers;
-
-		Timer timer;
 
 		uint64_t ticks;
 

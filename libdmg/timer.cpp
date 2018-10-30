@@ -24,10 +24,8 @@ void Timer::Reset()
 	timerCycles = 0;
 }
 
-void Timer::Sync()
+void Timer::Sync(const uint64_t& targetTicks)
 {
-	const uint64_t& targetTicks = cpu.Ticks();
-
 	while (ticks < targetTicks)
 		PerformCycle();
 }
@@ -46,9 +44,9 @@ void Timer::PerformCycle()
 	uint16_t timerDivider = TIMER_DIVIDERS[timerControl & 0x3];
 
 	// Check if the timer is enabled
-	if (READ_BIT(timerControl, 0x4))
+	if (READ_BIT(timerControl, 2))
 	{
-		// Increment the cycle counter and check if we should increase the counter register111
+		// Increment the cycle counter and check if we should increase the counter register
 		if (++timerCycles == timerDivider)
 		{
 			// Increment the counter register and check if it overflowed

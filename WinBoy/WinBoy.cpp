@@ -40,19 +40,19 @@ const Color COLORS[] =
 uint16_t breakpoints[] =
 {
 	0x0000,
+	//0x0050,	// Timer interrupt
+
+	0xC363,
 	
 	//0xC34A,	// DAA test
-	0xC317,		// Timer test. This PC is hit repeatedly, but should only be hit once (as in bgb)
-	0xC324,
-	0xC329,
-	0xC32F,
-
-	//0xC31A
 };
 
 uint8_t opcodeBreakpoints[] =
 {
-	0xF4
+	0xF4,
+
+	//0xF3,		// DI
+	//0xFB,		// EI
 };
 
 uint16_t memoryBreakpoints[] =
@@ -288,6 +288,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				emulator->PrintRegisters();
 			}
 
+			if (inputManager.GetKeyDown('T'))
+			{
+				Debug::Print("[WinBoy]: Executing one tick...\n");
+				emulator->Tick();
+			}
+
 			if (inputManager.GetKeyDown('P'))
 			{
 				emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
@@ -325,7 +331,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				}
 			}
 
-			if (inputManager.GetKeyDown('T'))
+			if (inputManager.GetKeyDown('F'))
 			{
 				Debug::Print("[WinBoy]: Drawing tileset to framebuffer... ");
 
@@ -364,6 +370,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			
 			do
 			{
+				uint64_t cpuTicks = cpu->Ticks();
 				emulator->Tick();
 				
 				// Calculate the time since boot for the CPU
@@ -376,9 +383,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					printf("[WinBoy]: Warning! Emulator was %.2fs behind. Skipping to catch up...\n", delta);
 				}
 
-				// Test for PC breakpoints
-				if (breakpointsEnabled)
+				if (cpu->Ticks() != cpuTicks && breakpointsEnabled)
 				{
+					// Test for PC breakpoints
 					const CPU::Registers& registers = cpu->GetRegisters();
 					for (uint8_t breakpointIdx = 0; breakpointIdx < sizeof(breakpoints) / sizeof(uint16_t); ++breakpointIdx)
 					{
@@ -400,9 +407,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							break;
 						}
 					}
-
 				}
-
 			} while (emulatorTime < realTime && !paused);
 		}
 

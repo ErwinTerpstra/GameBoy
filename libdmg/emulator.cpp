@@ -15,7 +15,9 @@ using namespace libdmg;
 
 Emulator::Emulator(CPU& cpu, Memory& memory, Cartridge& cartridge, Video& video, Audio& audio, Input& input) : 
 	cpu(cpu), memory(memory), cartridge(cartridge), video(video), audio(audio), input(input),
-	ticks(0), ticksUntilNextInstruction(0), historyIdx(0), historyLength(0)
+	timer(cpu, memory),
+	ticks(0), ticksUntilNextInstruction(0), 
+	historyIdx(0), historyLength(0)
 {
 	memory.BindIO(&input, audio.Sound1(), audio.Sound2());
 }
@@ -37,6 +39,7 @@ void Emulator::Boot()
 
 	// Reset IO subsystems
 	cpu.Reset();
+	timer.Reset();
 	video.Reset();
 	audio.Reset();
 }
@@ -59,19 +62,10 @@ void Emulator::Tick()
 	{
 		uint64_t previousTicks = cpu.Ticks();
 
-		if (!cpu.Halted())
+		if (!cpu.Halted() && ticksUntilNextInstruction == 0)
 		{
-			if (ticksUntilNextInstruction == 0)
-			{
-				// If the CPU is not halted, test interrupts after executing an instruction
-				ExecuteNextInstruction();
-				cpu.TestInterrupts();
-			}
-		}
-		else
-		{
-			// If the CPU is halted, test for interrupts every cycle
-			// This could probably be done less often, or have the RequestInterrupt function wakeup the CPU
+			// If the CPU is not halted, test interrupts after executing an instruction
+			ExecuteNextInstruction();
 			cpu.TestInterrupts();
 		}
 
@@ -84,6 +78,7 @@ void Emulator::Tick()
 	}
 
 	// Update IO subsystems
+	timer.Sync(ticks);
 	video.Sync(ticks);
 	audio.Sync(ticks);
 }
@@ -121,6 +116,7 @@ void Emulator::PrintRegisters() const
 
 	Debug::Print("pc: 0x%04X; sp: 0x%04X\n", registers.pc, registers.sp);
 	Debug::Print("ime: %d, if: 0x%02X; ie: 0x%02X\n", cpu.InterruptMasterEnable() ? 1 : 0, memory.ReadByte(GB_REG_IF), memory.ReadByte(GB_REG_IE));
+	Debug::Print("DIV: 0x%02X; TIMA: 0x%02X; TMA: 0x%02X; TAC: 0x%02X\n", memory.ReadByte(GB_REG_DIV), memory.ReadByte(GB_REG_TIMA), memory.ReadByte(GB_REG_TMA), memory.ReadByte(GB_REG_TAC));
 	Debug::Print("\n");
 }
 
