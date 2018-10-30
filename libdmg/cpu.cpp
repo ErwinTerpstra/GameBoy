@@ -377,25 +377,27 @@ void CPU::adjust_bcd(uint8_t opcode, const uint8_t* operands)
 
 	if (GetFlag(FLAG_SUBTRACT))
 	{
-		if (GetFlag(FLAG_HALF_CARRY))
-			value -= 0x06;
-
 		if (GetFlag(FLAG_CARRY))
 			value -= 0x60;
+
+		if (GetFlag(FLAG_HALF_CARRY))
+			value -= 0x06;
 	}
 	else
 	{
+		if (value > 0x99 || GetFlag(FLAG_CARRY))
+		{
+			value += 0x60;
+			SetFlag(FLAG_CARRY, true);
+		}
+
 		if ((value & 0x0F) > 0x09 || GetFlag(FLAG_HALF_CARRY))
 			value += 0x06;
-
-		if (value > 0x9F || GetFlag(FLAG_CARRY))
-			value += 0x60;
 
 	}
 
 	SetFlag(FLAG_ZERO, value == 0);
 	SetFlag(FLAG_HALF_CARRY, false);
-	SetFlag(FLAG_CARRY, value < registers.a);
 
 	registers.a = value;
 }

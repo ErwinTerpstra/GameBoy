@@ -16,9 +16,10 @@
 //#define ROM_FILE "../roms/Tetris (World).gb"
 //#define ROM_FILE "../roms/SuperMarioLand.gb"
 
-#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
-#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
+#define ROM_FILE "../roms/tests/cpu_instrs/individual/03-op sp,hl.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
@@ -42,9 +43,8 @@ uint16_t breakpoints[] =
 	0x0000,
 	//0x0050,	// Timer interrupt
 
-	0xC363,
-	
-	//0xC34A,	// DAA test
+	0xC33D,	// DAA test
+	0xC086, // Checksum store
 };
 
 uint8_t opcodeBreakpoints[] =
