@@ -415,9 +415,9 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 	registers.a = result;
 }
 
-void CPU::alu_add_sp_r8(uint8_t opcode, const uint8_t* operands)
+void CPU::alu_add_sp_constant(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t operand = operands[0];
+	int8_t operand = REINTERPRET(operands[0], int8_t);
 	uint16_t result = registers.sp + operand;
 
 	SetFlag(FLAG_ZERO, false);
@@ -534,7 +534,7 @@ void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, (**target ^ value) & 0x10);
+	SetFlag(FLAG_HALF_CARRY, **target & 0x10);
 }
 
 void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
@@ -560,7 +560,7 @@ void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, (**target ^ value) & 0x10);
+	SetFlag(FLAG_HALF_CARRY, **target & 0x10);
 }
 
 void CPU::alu_complement(uint8_t opcode, const uint8_t* operands)
@@ -587,7 +587,7 @@ void CPU::alu_set_carry(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_inc_16bit(uint8_t opcode, const uint8_t* operands)
 {
-	switch (opcode / 16)
+	switch (opcode >> 4)
 	{
 		case 0x0: ++registers.bc; break;
 		case 0x1: ++registers.de; break;
@@ -600,7 +600,7 @@ void CPU::alu_inc_16bit(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_dec_16bit(uint8_t opcode, const uint8_t* operands)
 {
-	switch (opcode / 16)
+	switch (opcode >> 16)
 	{
 		case 0x0: --registers.bc; break;
 		case 0x1: --registers.de; break;
@@ -741,7 +741,15 @@ void CPU::load_hl_to_sp(uint8_t opcode, const uint8_t* operands)
 
 void CPU::load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands)
 {
-	registers.hl = registers.sp + REINTERPRET(operands[0], int8_t);
+	int8_t operand = REINTERPRET(operands[0], int8_t);
+	uint16_t result = registers.sp + operand;
+
+	SetFlag(FLAG_ZERO, false);
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, (result ^ operand ^ registers.sp) & 0x10);
+	SetFlag(FLAG_CARRY, result < registers.sp);
+
+	registers.hl = result;
 }
 
 void CPU::load_sp_to_memory(uint8_t opcode, const uint8_t* operands)

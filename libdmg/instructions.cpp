@@ -250,7 +250,7 @@ const CPU::Instruction CPU::INSTRUCTION_MAP[] =
 	{ 0xE5, "PUSH HL", 1, 16, &CPU::push_stack_16bit },
 	{ 0xE6, "AND 0x%02X", 2, 8, &CPU::alu_and },
 	{ 0xE7, "RST 20H", 1, 16, &CPU::restart },
-	{ 0xE8, "ADD SP,0x%02X", 2, 16, &CPU::alu_add_sp_r8 },
+	{ 0xE8, "ADD SP,0x%02X", 2, 16, &CPU::alu_add_sp_constant },
 	{ 0xE9, "JP (HL)", 1, 4, &CPU::jump_to_hl },
 	{ 0xEA, "LD (0x%04X),A", 3, 16, &CPU::load_accumulator_to_memory_16bit },
 	{ 0xEB, "N/I", 0, 0, NULL },

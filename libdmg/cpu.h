@@ -163,7 +163,7 @@ namespace libdmg
 
 		/* 8-bit ALU */
 		void alu_add(uint8_t opcode, const uint8_t* operands);
-		void alu_add_sp_r8(uint8_t opcode, const uint8_t* operands);
+		void alu_add_sp_constant(uint8_t opcode, const uint8_t* operands);
 		void alu_adc(uint8_t opcode, const uint8_t* operands);
 		void alu_sub(uint8_t opcode, const uint8_t* operands);
 		void alu_sbc(uint8_t opcode, const uint8_t* operands);
