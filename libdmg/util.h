@@ -22,4 +22,13 @@
 
 #define REINTERPRET(value, type) (*reinterpret_cast<const type*>(&value))
 
+//#define CARRY_8(a, b, x) ((a ^ b ^ x) & 0x100)
+//#define CARRY_16(a, b, x) ((a ^ b ^ x) & 0x10000)
+
+#define CARRY_8(a, b, x) ((a + b) < a)
+#define CARRY_16(a, b, x) ((a + b) < a)
+
+#define HALF_CARRY_8(a, b, x) ((a ^ b ^ x) & 0x10)
+#define HALF_CARRY_16(a, b, x) ((a ^ b ^ x) & 0x800)
+
 #endif

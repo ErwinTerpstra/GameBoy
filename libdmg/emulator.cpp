@@ -72,7 +72,6 @@ void Emulator::Tick()
 		if (ticksUntilNextInstruction > 0)
 			--ticksUntilNextInstruction;
 
-
 		// Delay next CPU instruction until we've caught up 
 		ticksUntilNextInstruction += (uint32_t)(cpu.Ticks() - previousTicks);
 	}

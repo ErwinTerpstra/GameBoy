@@ -41,18 +41,13 @@ const Color COLORS[] =
 uint16_t breakpoints[] =
 {
 	0x0000,
-	//0x0050,	// Timer interrupt
-
-	0xC33D,	// DAA test
-	0xC086, // Checksum store
 };
 
 uint8_t opcodeBreakpoints[] =
 {
 	0xF4,
 
-	//0xF3,		// DI
-	//0xFB,		// EI
+	0xF8,
 };
 
 uint16_t memoryBreakpoints[] =
@@ -96,6 +91,7 @@ int main()
 }
 
 void DrawFrameBuffer();
+void PauseEmulator();
 
 void MemoryReadCallback(uint16_t address)
 {
@@ -109,7 +105,7 @@ void MemoryReadCallback(uint16_t address)
 		if (address == memoryBreakpoints[breakpointIdx])
 		{
 			Debug::Print("[WinBoy]: Memory read breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
-			paused = true;
+			PauseEmulator();
 			break;
 		}
 	}
@@ -127,7 +123,7 @@ void MemoryWriteCallback(uint16_t address)
 		if (address == memoryBreakpoints[breakpointIdx])
 		{
 			Debug::Print("[WinBoy]: Memory write breakpoint for 0x%04X hit at 0x%04X\n", address, registers.pc);
-			paused = true;
+			PauseEmulator();
 			break;
 		}
 	}
@@ -162,6 +158,14 @@ void DrawFrameBuffer()
 	}
 
 	window->DrawBuffer(*frameBuffer, *bufferAllocator);
+}
+
+void PauseEmulator()
+{
+	emulator->PrintDisassembly(DISASSEMBLY_LENGTH);
+	emulator->PrintRegisters();
+
+	paused = true;
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -233,6 +237,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	QueryPerformanceCounter(&previousFrameTicks);
 
 	double realTime = 0.0;
+	double timeScale = 1.0;
 
 	while (true)
 	{
@@ -271,6 +276,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Debug::Print("[WinBoy]: Sprite layer %s\n", video->GetLayerState(Video::LAYER_SPRITES) ? "enabled" : "disabled");
 			}
 		}
+
+		timeScale = inputManager.GetKey('P') ? 4.0 : 1.0;
 
 		if (paused)
 		{
@@ -365,7 +372,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			double emulatorTime;
 			LARGE_INTEGER currentTicks;
 			QueryPerformanceCounter(&currentTicks);
-			realTime += (currentTicks.QuadPart - previousFrameTicks.QuadPart) * secondsPerTick;
+			realTime += (currentTicks.QuadPart - previousFrameTicks.QuadPart) * secondsPerTick * timeScale;
 			previousFrameTicks = currentTicks;
 			
 			do
@@ -392,7 +399,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						if (registers.pc == breakpoints[breakpointIdx])
 						{
 							Debug::Print("[WinBoy]: Breakpoint hit at 0x%04X\n", registers.pc);
-							paused = true;
+							PauseEmulator();
 							break;
 						}
 					}
@@ -403,7 +410,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						if (nextOpcode == opcodeBreakpoints[breakpointIdx])
 						{
 							Debug::Print("[WinBoy]: Opcode breakpoint hit for 0x%02X at 0x%04X\n", nextOpcode, registers.pc);
-							paused = true;
+							PauseEmulator();
 							break;
 						}
 					}
