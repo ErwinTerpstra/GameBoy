@@ -25,10 +25,14 @@
 //#define CARRY_8(a, b, x) ((a ^ b ^ x) & 0x100)
 //#define CARRY_16(a, b, x) ((a ^ b ^ x) & 0x10000)
 
-#define CARRY_8(a, b, x) ((a + b) < a)
-#define CARRY_16(a, b, x) ((a + b) < a)
+#define OVERFLOW_8(a, b, x) (x < a)
+#define OVERFLOW_16(a, b, x) (x < a)
 
-#define HALF_CARRY_8(a, b, x) ((a ^ b ^ x) & 0x10)
-#define HALF_CARRY_16(a, b, x) ((a ^ b ^ x) & 0x800)
+#define UNDERFLOW_8(a, b, x) (x > a)
+#define UNDERFLOW_16(a, b, x) (x > a)
+
+#define CARRY_BIT_4(a, b, x) (((a ^ b ^ x) & 0x10) == 0x10)
+#define CARRY_BIT_8(a, b, x) (((a ^ b ^ x) & 0x100) == 0x100)
+#define CARRY_BIT_12(a, b, x) (((a ^ b ^ x) & 0x800) == 0x800)
 
 #endif

@@ -19,7 +19,8 @@
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
-#define ROM_FILE "../roms/tests/cpu_instrs/individual/03-op sp,hl.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/03-op sp,hl.gb"
+#define ROM_FILE "../roms/tests/cpu_instrs/individual/04-op r,imm.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
@@ -45,9 +46,9 @@ uint16_t breakpoints[] =
 
 uint8_t opcodeBreakpoints[] =
 {
-	0xF4,
+	0xCE,
 
-	0xF8,
+	0xF4, // Not implemented
 };
 
 uint16_t memoryBreakpoints[] =

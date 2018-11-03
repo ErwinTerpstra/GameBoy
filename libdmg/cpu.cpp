@@ -409,23 +409,10 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 	
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_8(registers.a, value, result));
-	SetFlag(FLAG_CARRY, result < registers.a);
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
+	SetFlag(FLAG_CARRY, OVERFLOW_8(registers.a, value, result));
 
 	registers.a = result;
-}
-
-void CPU::alu_add_sp_constant(uint8_t opcode, const uint8_t* operands)
-{
-	int8_t operand = REINTERPRET(operands[0], int8_t);
-	uint16_t result = registers.sp + operand;
-
-	SetFlag(FLAG_ZERO, false);
-	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_16(registers.sp, operand, result));
-	SetFlag(FLAG_CARRY, CARRY_16(registers.sp, operand, result));
-
-	registers.sp = result;
 }
 
 void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
@@ -435,8 +422,8 @@ void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_8(registers.a, value, result));
-	SetFlag(FLAG_CARRY, result < registers.a);
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
+	SetFlag(FLAG_CARRY, OVERFLOW_8(registers.a, value, result));
 
 	registers.a = result;
 }
@@ -448,8 +435,8 @@ void CPU::alu_sub(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_8(registers.a, value, result));
-	SetFlag(FLAG_CARRY, value > registers.a);
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
+	SetFlag(FLAG_CARRY, UNDERFLOW_8(registers.a, value, result));
 
 	registers.a = result;
 }
@@ -461,8 +448,8 @@ void CPU::alu_sbc(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_8(registers.a, value, result));
-	SetFlag(FLAG_CARRY, value > result);
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
+	SetFlag(FLAG_CARRY, UNDERFLOW_8(registers.a, value, result));
 
 	registers.a = result;
 }
@@ -508,7 +495,7 @@ void CPU::alu_cmp(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_8(registers.a, value, result));
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
 	SetFlag(FLAG_CARRY, result > registers.a);
 }
 
@@ -534,7 +521,7 @@ void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, **target & 0x10);
+	SetFlag(FLAG_HALF_CARRY, (**target & 0x10) == 0x10);
 }
 
 void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
@@ -560,7 +547,7 @@ void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, **target == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, **target & 0x10);
+	SetFlag(FLAG_HALF_CARRY, (**target & 0x10) == 0x10);
 }
 
 void CPU::alu_complement(uint8_t opcode, const uint8_t* operands)
@@ -600,7 +587,7 @@ void CPU::alu_inc_16bit(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_dec_16bit(uint8_t opcode, const uint8_t* operands)
 {
-	switch (opcode >> 16)
+	switch (opcode >> 4)
 	{
 		case 0x0: --registers.bc; break;
 		case 0x1: --registers.de; break;
@@ -629,10 +616,23 @@ void CPU::alu_add_hl_16bit(uint8_t opcode, const uint8_t* operands)
 	uint16_t result = registers.hl + value;
 
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
-	registers.f = SET_MASK_IF(registers.f, FLAG_HALF_CARRY, HALF_CARRY_16(registers.hl, value, result));
-	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, result < registers.hl);
+	registers.f = SET_MASK_IF(registers.f, FLAG_HALF_CARRY, CARRY_BIT_12(registers.hl, value, result));
+	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, OVERFLOW_16(registers.hl, value, result));
 
 	registers.hl = result;
+}
+
+void CPU::alu_add_sp_constant(uint8_t opcode, const uint8_t* operands)
+{
+	int8_t operand = REINTERPRET(operands[0], int8_t);
+	uint16_t result = registers.sp + operand;
+
+	SetFlag(FLAG_ZERO, false);
+	SetFlag(FLAG_SUBTRACT, false);
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.sp, operand, result));
+	SetFlag(FLAG_CARRY, CARRY_BIT_8(registers.sp, operand, result));
+
+	registers.sp = result;
 }
 
 void CPU::load_constant(uint8_t opcode, const uint8_t* operands)
@@ -746,8 +746,8 @@ void CPU::load_sp_plus_constant_to_hl(uint8_t opcode, const uint8_t* operands)
 
 	SetFlag(FLAG_ZERO, false);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, HALF_CARRY_16(registers.sp, operand, result));
-	SetFlag(FLAG_CARRY, CARRY_16(registers.sp, operand, result));
+	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.sp, operand, result));
+	SetFlag(FLAG_CARRY, CARRY_BIT_8(registers.sp, operand, result));
 
 	registers.hl = result;
 }
