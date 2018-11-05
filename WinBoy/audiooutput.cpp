@@ -154,6 +154,8 @@ HRESULT AudioOutput::Finalize()
 
 HRESULT AudioOutput::LoadData(UINT32 numFrames, BYTE* data, DWORD* flags)
 {
+	//return LoadSine(numFrames, data, flags);
+
 	RingBuffer& outputBuffer = audio.GetOutputBuffer();
 	uint8_t bytesPerSample = waveFormat->wBitsPerSample / 8;
 
@@ -169,7 +171,7 @@ HRESULT AudioOutput::LoadData(UINT32 numFrames, BYTE* data, DWORD* flags)
 		{
 			if (channel < 2)
 			{
-				float sample = outputBuffer.ReadByte() / 255.0f;
+				float sample = ((((float) outputBuffer.ReadByte()) / 255) - 0.5f) * 2.0f;
 				WriteSample(sample, waveFormat->wBitsPerSample, data);
 			}
 
@@ -195,7 +197,7 @@ HRESULT AudioOutput::LoadSine(UINT32 numFrames, BYTE* data, DWORD* flags)
 
 	for (uint32_t frameIdx = 0; frameIdx < numFrames; ++frameIdx, ++phase)
 	{
-		float sample = 0.5f + (sinf((phase / (float) waveFormat->nSamplesPerSec) * FREQUENCY * PI * 2) * VOLUME * 0.5f);
+		float sample = sinf((phase / (float) waveFormat->nSamplesPerSec) * FREQUENCY * PI * 2) * VOLUME;
 		
 		for (uint32_t channel = 0; channel < waveFormat->nChannels; ++channel)
 		{
@@ -222,7 +224,7 @@ void AudioOutput::WriteSample(float sample, WORD bitsPerSample, BYTE* buffer)
 			break;
 		case 32:
 			if (waveFormatExtensible != NULL && waveFormatExtensible->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
-				*((float*)buffer) = (sample - 0.5f) * 2.0f;
+				*((float*)buffer) = sample;
 			else
 				WriteSample<32>(sample, buffer);
 

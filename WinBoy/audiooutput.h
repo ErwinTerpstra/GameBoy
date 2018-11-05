@@ -56,19 +56,19 @@ namespace WinBoy
 		template<>
 		void WriteSample<8U>(float sample, BYTE* buffer)
 		{
-			WRITE_BYTE(buffer, (uint8_t)(sample * ((1 << 8) - 1)));
+			WRITE_SBYTE(buffer, (int8_t)(sample * 127));
 		}
 
 		template<>
 		void WriteSample<16U>(float sample, BYTE* buffer)
 		{
-			WRITE_SHORT(buffer, (uint16_t)(sample * ((1 << 16) - 1)));
+			WRITE_SSHORT(buffer, (int16_t)(sample * 32768));
 		}
 
 		template<>
 		void WriteSample<32U>(float sample, BYTE* buffer)
 		{
-			WRITE_LONG(buffer, (uint32_t)(sample * (((uint64_t) 1 << 32) - 1)));
+			WRITE_SLONG(buffer, (int32_t)(sample * 2147483648));
 		}
 
 	};

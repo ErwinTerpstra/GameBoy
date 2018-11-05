@@ -103,7 +103,7 @@ void ToneGenerator::WriteByte(uint16_t address, uint8_t value)
 			lengthCounterEnabled = READ_BIT(value, 6);
 
 			// The lowest three bits are the upper three bits of the 11 bit frequency
-			frequency = (frequency & 0xFF) | ((value & 0x3) << 8);
+			frequency = (frequency & 0xFF) | ((value & 0x7) << 8);
 
 			break;
 

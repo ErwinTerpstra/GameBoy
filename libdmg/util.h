@@ -4,9 +4,12 @@
 #define DECODE_SHORT(x) (*(x) | (*((x) + 1) << 8))
 #define DECODE_SIGNED_BYTE(x) (*(reinterpret_cast<const int8_t*>(x)))
 
-#define WRITE_BYTE(dst, value) (*(dst) = (value))
+#define WRITE_BYTE(dst, value) (*reinterpret_cast<uint8_t*>(dst) = (value))
+#define WRITE_SBYTE(dst, value) (*reinterpret_cast<int8_t*>(dst) = (value))
 #define WRITE_SHORT(dst, value) (*reinterpret_cast<uint16_t*>(dst) = (value))
+#define WRITE_SSHORT(dst, value) (*reinterpret_cast<int16_t*>(dst) = (value))
 #define WRITE_LONG(dst, value) (*reinterpret_cast<uint32_t*>(dst) = (value))
+#define WRITE_SLONG(dst, value) (*reinterpret_cast<int32_t*>(dst) = (value))
 
 #define READ_MASK(value, mask) (((value) & mask) == mask)
 #define READ_BIT(value, bit) (((value) & (1 << bit)) != 0)
