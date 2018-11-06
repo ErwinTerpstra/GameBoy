@@ -84,10 +84,11 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		case 2: 
 		case 3:
 		{
-			printf("[Memory]: MBC1: 2MB ROM 32KB RAM\n");
 			MBC1* mbc = new MBC1(cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;
+
+			printf("[Memory]: MBC1: %uKB ROM %uKB RAM\n", mbc->rom.Size() >> 10, mbc->ram.Size() >> 10);
 			break;
 		}
 

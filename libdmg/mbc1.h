@@ -19,10 +19,21 @@ namespace libdmg
 		private:
 			MBC1& mbc;
 
+			uint32_t size;
+
 		public:
 			ROM(MBC1& mbc) : mbc(mbc)
 			{
+			}
 
+			const uint16_t Banks() const
+			{
+				return mbc.cartridge.header->romSize << 2;
+			}
+
+			const uint32_t Size() const
+			{
+				return 0x8000 << mbc.cartridge.header->romSize;
 			}
 
 			uint8_t ReadByte(uint16_t address) const
@@ -33,16 +44,16 @@ namespace libdmg
 
 			void WriteByte(uint16_t address, uint8_t value)
 			{
-				uint8_t opcode = (address >> 13) & 0x03;
-				
-				switch (opcode)
+				switch (address & 0xF000)
 				{
-					case 0x00:
+					case 0x0000:
+					case 0x1000:
 						// RAM enable
-						mbc.ramEnabled = (value & 0x0A) == 0x0A;
+						mbc.ramEnabled = (value & 0xF) == 0xA;
 						break;
 
-					case 0x01:
+					case 0x2000:
+					case 0x3000:
 						// ROM bank select, lower 5 bits only
 						value &= 0x1F;
 
@@ -54,7 +65,8 @@ namespace libdmg
 						mbc.selectedROMBank = (mbc.selectedROMBank & ~0x1F) | value;
 						break;
 
-					case 0x02:
+					case 0x4000:
+					case 0x5000:
 						// RAM bank/upper ROM bank select, lower 2 bits only
 						value &= 0x03;
 
@@ -65,16 +77,17 @@ namespace libdmg
 						else
 						{
 							// Use value as bits 5 & 6 of selected ROM bank
-							mbc.selectedROMBank = (mbc.selectedROMBank & ~0x60) | (value << 5);
+							mbc.selectedROMBank = (mbc.selectedROMBank & ~0x1F) | (value << 5);
 						}
 
 						break;
 
-					case 0x03:
+					case 0x6000:
+					case 0x7000:
 						// ROM/RAM mode switch
 						if (value)
 						{
-							mbc.selectedROMBank = 1;
+							mbc.selectedROMBank &= 0x1F;
 							mbc.ramBankMode = true;
 						}
 						else
@@ -99,14 +112,20 @@ namespace libdmg
 			MBC1& mbc;
 
 			uint8_t* buffer;
+			uint32_t size;
 
 		public:
 			RAM(MBC1& mbc) : mbc(mbc)
 			{
 				assert(mbc.cartridge.header->ramSize < (sizeof(Cartridge::RAM_SIZES) / sizeof(uint8_t)));
 
-				// RAM sizes are stored in KB
-				buffer = new uint8_t[Cartridge::RAM_SIZES[mbc.cartridge.header->ramSize] << 10];
+				size = Cartridge::RAM_SIZES[mbc.cartridge.header->ramSize];
+				size <<= 10; // RAM sizes are stored in KB
+
+				buffer = new uint8_t[size];
+
+				// According to SameBoy source, uninitialized MBC RAM should be 0xFF
+				memset(buffer, 0xFF, size);
 			}
 
 			~RAM()
@@ -115,11 +134,23 @@ namespace libdmg
 					delete[] buffer;
 			}
 
-			uint8_t ReadByte(uint16_t address) const { return GetCurrentBank()[address]; }
+			uint32_t Size() const { return size; }
+
+			uint8_t ReadByte(uint16_t address) const
+			{
+				if (!mbc.ramEnabled)
+					return 0xFF;
+
+				return GetCurrentBank()[address]; 
+			}
 
 			void WriteByte(uint16_t address, uint8_t value)
 			{
-				assert(mbc.ramEnabled);
+				if (!mbc.ramEnabled)
+					return;
+
+				assert(size > 0);
+
 				WRITE_BYTE(GetCurrentBank() + address, value); 
 			}
 

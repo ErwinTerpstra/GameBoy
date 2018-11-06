@@ -14,7 +14,7 @@
 #include "audiooutput.h"
 
 //#define ROM_FILE "../roms/Tetris (World).gb"
-//#define ROM_FILE "../roms/SuperMarioLand.gb"
+#define ROM_FILE "../roms/SuperMarioLand.gb"
 
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
@@ -26,7 +26,8 @@
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/08-misc instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/09-op r,r.gb"
-#define ROM_FILE "../roms/tests/cpu_instrs/individual/10-bit ops.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/10-bit ops.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/11-op a,(hl).gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
