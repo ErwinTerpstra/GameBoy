@@ -14,7 +14,8 @@
 #include "audiooutput.h"
 
 //#define ROM_FILE "../roms/Tetris (World).gb"
-#define ROM_FILE "../roms/SuperMarioLand.gb"
+//#define ROM_FILE "../roms/SuperMarioLand.gb"
+#define ROM_FILE "../roms/Pokemon Blue.gb"
 
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
