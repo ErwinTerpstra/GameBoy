@@ -519,11 +519,13 @@ void CPU::alu_inc(uint8_t opcode, const uint8_t* operands)
 	}
 
 	uint8_t value = **target;
-	*target = value + 1;
+	uint8_t result = value + 1;
 
-	SetFlag(FLAG_ZERO, **target == 0);
+	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, (**target & 0x10) == 0x10);
+	SetFlag(FLAG_HALF_CARRY, (result & 0xF) == 0x0);
+
+	*target = result;
 }
 
 void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
@@ -544,12 +546,13 @@ void CPU::alu_dec(uint8_t opcode, const uint8_t* operands)
 	}
 
 	uint8_t value = **target;
+	uint8_t result = value - 1;
 
-	*target = value - 1;
-
-	SetFlag(FLAG_ZERO, **target == 0);
+	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, (**target & 0x10) == 0x10);
+	SetFlag(FLAG_HALF_CARRY, (result & 0xF) == 0xF);
+
+	*target = result;
 }
 
 void CPU::alu_complement(uint8_t opcode, const uint8_t* operands)
@@ -810,6 +813,7 @@ void CPU::rotate_accumulator_left(uint8_t opcode, const uint8_t* operands)
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+	registers.f = UNSET_MASK(registers.f, FLAG_ZERO);
 }
 
 void CPU::rotate_accumulator_right(uint8_t opcode, const uint8_t* operands)
@@ -820,6 +824,7 @@ void CPU::rotate_accumulator_right(uint8_t opcode, const uint8_t* operands)
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+	registers.f = UNSET_MASK(registers.f, FLAG_ZERO);
 }
 
 void CPU::rotate_accumulator_left_circular(uint8_t opcode, const uint8_t* operands)
@@ -830,6 +835,7 @@ void CPU::rotate_accumulator_left_circular(uint8_t opcode, const uint8_t* operan
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+	registers.f = UNSET_MASK(registers.f, FLAG_ZERO);
 }
 
 void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* operands)
@@ -840,6 +846,7 @@ void CPU::rotate_accumulator_right_circular(uint8_t opcode, const uint8_t* opera
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
+	registers.f = UNSET_MASK(registers.f, FLAG_ZERO);
 }
 
 void CPU::rotate_left(uint8_t opcode, const uint8_t* operands)
@@ -849,6 +856,7 @@ void CPU::rotate_left(uint8_t opcode, const uint8_t* operands)
 	*value = ((**value << 1) | READ_MASK(registers.f, FLAG_CARRY));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 }
@@ -860,6 +868,7 @@ void CPU::rotate_right(uint8_t opcode, const uint8_t* operands)
 	*value = ((**value >> 1) | (READ_MASK(registers.f, FLAG_CARRY) << 7));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 }
@@ -871,6 +880,7 @@ void CPU::rotate_left_circular(uint8_t opcode, const uint8_t* operands)
 	*value = ((**value << 1) | bit7);
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit7);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 }
@@ -882,6 +892,7 @@ void CPU::rotate_right_circular(uint8_t opcode, const uint8_t* operands)
 	*value = ((**value >> 1) | (bit0 << 7));
 
 	registers.f = SET_MASK_IF(registers.f, FLAG_CARRY, bit0);
+	registers.f = SET_MASK_IF(registers.f, FLAG_ZERO, **value == 0);
 	registers.f = UNSET_MASK(registers.f, FLAG_SUBTRACT);
 	registers.f = UNSET_MASK(registers.f, FLAG_HALF_CARRY);
 }

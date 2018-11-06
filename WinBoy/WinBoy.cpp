@@ -20,8 +20,13 @@
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/03-op sp,hl.gb"
-#define ROM_FILE "../roms/tests/cpu_instrs/individual/04-op r,imm.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/04-op r,imm.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/05-op rp.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/06-ld r,r.gb""
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/08-misc instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/09-op r,r.gb"
+#define ROM_FILE "../roms/tests/cpu_instrs/individual/10-bit ops.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
@@ -47,15 +52,12 @@ uint16_t breakpoints[] =
 
 uint8_t opcodeBreakpoints[] =
 {
-	0xCE,
-
 	0xF4, // Not implemented
 };
 
 uint16_t memoryBreakpoints[] =
 {
-	0x00,
-
+	0x1234
 	//0xFF80,	// Current joypad state
 	//0xFF81,	// Changed joypad bits
 
@@ -433,7 +435,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		input->SetButtonState(Input::BUTTON_DPAD_RIGHT, inputManager.GetKey(VK_RIGHT));
 		input->SetButtonState(Input::BUTTON_DPAD_UP, inputManager.GetKey(VK_UP));
 
-		Sleep(1);
+		Sleep(0);
 	}
 
 	audioOutput->Finalize();
