@@ -417,13 +417,14 @@ void CPU::alu_add(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_adc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode, operands) + GetFlag(FLAG_CARRY);
-	uint8_t result = registers.a + value;
+	uint8_t carry = GetFlag(FLAG_CARRY);
+	uint8_t value = ReadSourceValue(opcode, operands);
+	uint8_t result = registers.a + value + carry;
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, false);
-	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
-	SetFlag(FLAG_CARRY, OVERFLOW_8(registers.a, value, result));
+	SetFlag(FLAG_HALF_CARRY, (registers.a & 0xF) + (value & 0xF) + carry > 0xF);
+	SetFlag(FLAG_CARRY, ((uint16_t)registers.a + value + carry) > 0xFF);
 
 	registers.a = result;
 }
@@ -443,13 +444,14 @@ void CPU::alu_sub(uint8_t opcode, const uint8_t* operands)
 
 void CPU::alu_sbc(uint8_t opcode, const uint8_t* operands)
 {
-	uint8_t value = ReadSourceValue(opcode, operands) + GetFlag(FLAG_CARRY);
-	uint8_t result = registers.a - value;
+	uint8_t carry = GetFlag(FLAG_CARRY);
+	uint8_t value = ReadSourceValue(opcode, operands);
+	uint8_t result = registers.a - value - carry;
 
 	SetFlag(FLAG_ZERO, result == 0);
 	SetFlag(FLAG_SUBTRACT, true);
-	SetFlag(FLAG_HALF_CARRY, CARRY_BIT_4(registers.a, value, result));
-	SetFlag(FLAG_CARRY, UNDERFLOW_8(registers.a, value, result));
+	SetFlag(FLAG_HALF_CARRY, (registers.a & 0xF) < ((value & 0xF) + carry));
+	SetFlag(FLAG_CARRY, ((int16_t)registers.a - value - carry) < 0);
 
 	registers.a = result;
 }

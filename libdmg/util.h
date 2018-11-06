@@ -28,8 +28,8 @@
 //#define CARRY_8(a, b, x) ((a ^ b ^ x) & 0x100)
 //#define CARRY_16(a, b, x) ((a ^ b ^ x) & 0x10000)
 
-#define OVERFLOW_8(a, b, x) (x < a)
-#define OVERFLOW_16(a, b, x) (x < a)
+#define OVERFLOW_8(a, b, x) (((uint16_t)a + b) > 0xFF)
+#define OVERFLOW_16(a, b, x) (((uint32_t)a + b) > 0xFFFF)
 
 #define UNDERFLOW_8(a, b, x) (x > a)
 #define UNDERFLOW_16(a, b, x) (x > a)

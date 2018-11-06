@@ -21,6 +21,7 @@
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/02-interrupts.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/03-op sp,hl.gb"
 #define ROM_FILE "../roms/tests/cpu_instrs/individual/04-op r,imm.gb"
+//#define ROM_FILE "../roms/tests/cpu_instrs/individual/09-op r,r.gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
 
