@@ -183,7 +183,7 @@
     <ClInclude Include="gameboy.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="libdmg.h" />
-    <ClInclude Include="mbc1.h" />
+    <ClInclude Include="mbc.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="memorybank.h" />
     <ClInclude Include="memorybuffer.h" />
@@ -200,6 +200,7 @@
     <ClCompile Include="emulator.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="instructions.cpp" />
+    <ClCompile Include="mbc.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="memorypointer.cpp" />
     <ClCompile Include="ringbuffer.cpp" />

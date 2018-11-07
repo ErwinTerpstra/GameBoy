@@ -21,9 +21,6 @@
     <ClInclude Include="memory.h">
       <Filter>memory</Filter>
     </ClInclude>
-    <ClInclude Include="mbc1.h">
-      <Filter>memory</Filter>
-    </ClInclude>
     <ClInclude Include="audio.h">
       <Filter>audio</Filter>
     </ClInclude>
@@ -31,6 +28,9 @@
       <Filter>audio</Filter>
     </ClInclude>
     <ClInclude Include="memorypointer.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="mbc.h">
       <Filter>memory</Filter>
     </ClInclude>
   </ItemGroup>
@@ -55,6 +55,9 @@
       <Filter>audio</Filter>
     </ClCompile>
     <ClCompile Include="memorypointer.cpp">
+      <Filter>memory</Filter>
+    </ClCompile>
+    <ClCompile Include="mbc.cpp">
       <Filter>memory</Filter>
     </ClCompile>
   </ItemGroup>

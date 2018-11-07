@@ -6,7 +6,7 @@
 #include "gameboy.h"
 
 #include "memorybuffer.h"
-#include "mbc1.h"
+#include "mbc.h"
 
 #include "cartridge.h"
 
@@ -70,7 +70,7 @@ void Memory::BindCatridge(Cartridge& cartridge)
 
 	switch (cartridge.header->cartridgeHardware)
 	{
-		case 0:
+		case 0x00:
 		{
 			printf("[Memory]: 32KB ROM, no RAM\n");
 
@@ -80,15 +80,46 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		}
 
 		// MBC1
-		case 1: 
-		case 2: 
-		case 3:
+		case 0x01: 
+		case 0x02: 
+		case 0x03:
 		{
-			MBC1* mbc = new MBC1(cartridge);
+			MBC* mbc = new MBC(MBC::MBC1, cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;
 
 			printf("[Memory]: MBC1: %uKB ROM %uKB RAM\n", mbc->rom.Size() >> 10, mbc->ram.Size() >> 10);
+			break;
+		}
+
+		// MBC3
+		case 0x0F:
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		case 0x13:
+		{
+			MBC* mbc = new MBC(MBC::MBC3, cartridge);
+			romRange->bank = &mbc->rom;
+			ramRange->bank = &mbc->ram;
+
+			printf("[Memory]: MBC3: %uKB ROM %uKB RAM\n", mbc->rom.Size() >> 10, mbc->ram.Size() >> 10);
+			break;
+		}
+
+		// MBC5
+		case 0x19:
+		case 0x1A:
+		case 0x1B:
+		case 0x1C:
+		case 0x1D:
+		case 0x1E:
+		{
+			MBC* mbc = new MBC(MBC::MBC5, cartridge);
+			romRange->bank = &mbc->rom;
+			ramRange->bank = &mbc->ram;
+
+			printf("[Memory]: MBC5: %uKB ROM %uKB RAM\n", mbc->rom.Size() >> 10, mbc->ram.Size() >> 10);
 			break;
 		}
 
