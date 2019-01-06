@@ -9,6 +9,7 @@ MBC::MBC(MBC::Type type, Cartridge& cartridge) :
 	type(type), cartridge(cartridge), 
 	rom(*this), ram(*this),
 	ramEnabled(false), ramBankMode(false), 
+	ramDirty(false),
 	selectedROMBank(1), selectedRAMBank(0)
 {
 
@@ -205,17 +206,11 @@ MBC::RAM::RAM(MBC& mbc) : mbc(mbc)
 
 	size = Cartridge::RAM_SIZES[mbc.cartridge.header->ramSize];
 	size <<= 10; // RAM sizes are stored in KB
-
-	buffer = new uint8_t[size];
-
-	// According to SameBoy source, uninitialized MBC RAM should be 0xFF
-	memset(buffer, 0xFF, size);
 }
 
 MBC::RAM::~RAM()
 {
-	if (buffer != NULL)
-		delete[] buffer;
+
 }
 
 uint32_t MBC::RAM::Size() const { return size; }
@@ -234,6 +229,8 @@ void MBC::RAM::WriteByte(uint16_t address, uint8_t value)
 		return;
 
 	assert(size > 0);
+
+	mbc.ramDirty = true;
 
 	WRITE_BYTE(GetCurrentBank() + address, value);
 }

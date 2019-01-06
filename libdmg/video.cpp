@@ -147,46 +147,51 @@ void Video::SetPixel(uint8_t x, uint8_t y, uint8_t color)
 
 void Video::DrawLine()
 {
-	if (layerStates[LAYER_BACKGROUND] && READ_BIT(*lcdControlRegister, LCDC_BG_ENABLE))
+	if (READ_BIT(*lcdControlRegister, LCDC_BG_ENABLE))
 	{
-		uint16_t bgMapAddress = READ_BIT(*lcdControlRegister, LCDC_BG_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
-		uint16_t bgTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
+		// Draw BG
+		if (layerStates[LAYER_BACKGROUND])
+		{
+			uint16_t bgMapAddress = READ_BIT(*lcdControlRegister, LCDC_BG_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
+			uint16_t bgTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_2;
 
-		uint8_t scrollX = memory.ReadByte(GB_REG_SCX);
-		uint8_t scrollY = memory.ReadByte(GB_REG_SCY);
+			uint8_t scrollX = memory.ReadByte(GB_REG_SCX);
+			uint8_t scrollY = memory.ReadByte(GB_REG_SCY);
 
-		DrawMap(bgMapAddress, bgTileDataAddresss, *paletteRegister, scrollX, scrollY);
+			DrawMap(0, 0, bgMapAddress, bgTileDataAddresss, *paletteRegister, scrollX, scrollY);
+		}
+
+		// Draw window
+		if (layerStates[LAYER_WINDOW] && READ_BIT(*lcdControlRegister, LCDC_WINDOW_ENABLE))
+		{
+			uint16_t windowMapAddress = READ_BIT(*lcdControlRegister, LCDC_WINDOW_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
+			uint16_t windowTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_2;
+
+			uint8_t offsetX = memory.ReadByte(GB_REG_WX) - 7;
+			uint8_t offsetY = memory.ReadByte(GB_REG_WY);
+
+			if (offsetX < GB_SCREEN_WIDTH && offsetY < GB_SCREEN_HEIGHT && scanline >= offsetY)
+				DrawMap(offsetX, offsetY, windowMapAddress, windowTileDataAddresss, *paletteRegister, 0, 0);
+		}
 	}
 	else
 		memset(videoBuffer + scanline * GB_SCREEN_WIDTH / 4, 0x00, GB_SCREEN_WIDTH / 4);
-
-
-	if (layerStates[LAYER_WINDOW] && READ_BIT(*lcdControlRegister, LCDC_WINDOW_ENABLE))
-	{
-		uint16_t windowMapAddress = READ_BIT(*lcdControlRegister, LCDC_WINDOW_MAP_SELECT) ? GB_BG_MAP_1 : GB_BG_MAP_0;
-		uint16_t windowTileDataAddresss = READ_BIT(*lcdControlRegister, LCDC_BG_DATA_SELECT) ? GB_TILE_DATA_0 : GB_TILE_DATA_1;
-
-		uint8_t scrollX = memory.ReadByte(GB_REG_WX);
-		uint8_t scrollY = memory.ReadByte(GB_REG_WY);
-
-		DrawMap(windowMapAddress, windowMapAddress, *paletteRegister, 0, 0);
-	}
 
 	if (layerStates[LAYER_SPRITES] && READ_BIT(*lcdControlRegister, LCDC_SPRITE_ENABLE))
 		DrawSprites();
 }
 
-void Video::DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palette, uint8_t scrollX, uint8_t scrollY)
+void Video::DrawMap(uint8_t offsetX, uint8_t offsetY, uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palette, uint8_t scrollX, uint8_t scrollY)
 {
-	uint8_t mapY = ((scrollY + scanline) % GB_BG_HEIGHT);
+	uint8_t mapY = ((scrollY + scanline - offsetY) % GB_BG_HEIGHT);
 	uint8_t tileY = mapY / GB_TILE_HEIGHT;
 	uint8_t tileLocalY = mapY % GB_TILE_HEIGHT;
 
-	bool signedTileIndices = tileDataAddress == GB_TILE_DATA_1;
+	bool signedTileIndices = tileDataAddress == GB_TILE_DATA_2;
 
-	for (uint8_t x = 0; x < GB_SCREEN_WIDTH; ++x)
+	for (uint8_t x = offsetX; x < GB_SCREEN_WIDTH; ++x)
 	{
-		uint8_t mapX = ((scrollX + x) % GB_BG_WIDTH);
+		uint8_t mapX = ((scrollX + x - offsetX) % GB_BG_WIDTH);
 		uint8_t tileX = mapX / GB_TILE_WIDTH;
 
 		// Read the index of the tile to use for this pixel
@@ -246,10 +251,10 @@ void Video::DrawSprites()
 		uint8_t tileIdx = sprite->tileIdx;
 		if (doubleSize)
 		{
-			tileIdx &= 0xFE;
-
 			if (tileY >= GB_TILE_HEIGHT)
 				tileIdx |= 0x01;
+			else
+				tileIdx &= 0xFE;
 		}
 
 		// Read the tile data for this sprite
@@ -282,14 +287,14 @@ void Video::DrawSprites()
 			uint8_t tileData = tileBuffer[tilePixelOffset / 4];
 			uint8_t tileBit = (tilePixelOffset % 4) << 1;
 
-			// Retrieve the palette color index from the 4 pixel byte
+			// Retrieve the 2 bit palette color index from the 4 pixel byte
 			uint8_t paletteColorIdx = (tileData >> tileBit) & 0x03;
+
+			if (paletteColorIdx == 0)
+				continue;
 
 			// Retrieve the color from the palette
 			color = (palette >> (paletteColorIdx << 1)) & 0x03;
-
-			if (color == 0)
-				continue;
 
 			SetPixel((uint8_t) x, scanline, color);
 		}

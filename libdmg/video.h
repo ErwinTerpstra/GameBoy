@@ -106,7 +106,7 @@ namespace libdmg
 
 		void DrawLine();
 
-		void DrawMap(uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palette, uint8_t scrollX, uint8_t scrollY);
+		void DrawMap(uint8_t offsetX, uint8_t offsetY, uint16_t mapAddress, uint16_t tileDataAddress, uint8_t palette, uint8_t scrollX, uint8_t scrollY);
 		void DrawSprites();
 
 		uint8_t GetPixel(uint8_t x, uint8_t y);

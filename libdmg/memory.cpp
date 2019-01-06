@@ -14,7 +14,7 @@ using namespace libdmg;
 
 uint16_t null;
 
-Memory::Memory() : MemoryWriteCallback(NULL)
+Memory::Memory() : MemoryWriteCallback(NULL), mbc(NULL)
 {
 	MemoryBuffer* vramBuffer	= new MemoryBuffer(0x2000);
 	MemoryBuffer* wramBuffer	= new MemoryBuffer(0x2000);
@@ -61,12 +61,12 @@ void Memory::BindIO(MemoryBank* input, MemoryBank* sound1, MemoryBank* sound2)
 	FindMemoryRange(GB_REG_NR21)->bank = sound2;
 }
 
-void Memory::BindCatridge(Cartridge& cartridge)
+void Memory::BindCartridge(Cartridge& cartridge)
 {
 	MemoryRange* romRange = FindMemoryRange(GB_ROM);
 	MemoryRange* ramRange = FindMemoryRange(GB_CRAM);
 
-	// TODO: make sure memory from previous cartridge is free'd
+	mbc = NULL;
 
 	switch (cartridge.header->cartridgeHardware)
 	{
@@ -84,7 +84,7 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		case 0x02: 
 		case 0x03:
 		{
-			MBC* mbc = new MBC(MBC::MBC1, cartridge);
+			mbc = new MBC(MBC::MBC1, cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;
 
@@ -99,7 +99,7 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		case 0x12:
 		case 0x13:
 		{
-			MBC* mbc = new MBC(MBC::MBC3, cartridge);
+			mbc = new MBC(MBC::MBC3, cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;
 
@@ -115,7 +115,7 @@ void Memory::BindCatridge(Cartridge& cartridge)
 		case 0x1D:
 		case 0x1E:
 		{
-			MBC* mbc = new MBC(MBC::MBC5, cartridge);
+			mbc = new MBC(MBC::MBC5, cartridge);
 			romRange->bank = &mbc->rom;
 			ramRange->bank = &mbc->ram;
 

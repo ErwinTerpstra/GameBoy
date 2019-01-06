@@ -13,6 +13,8 @@
 #include "inputmanager.h"
 #include "audiooutput.h"
 
+#include "cartridgeloader.h"
+
 //#define ROM_FILE "../roms/Tetris (World).gb"
 //#define ROM_FILE "../roms/SuperMarioLand.gb"
 #define ROM_FILE "../roms/Pokemon Blue.gb"
@@ -59,7 +61,7 @@ uint8_t opcodeBreakpoints[] =
 
 uint16_t memoryBreakpoints[] =
 {
-	0x1234
+	0x0000
 	//0xFF80,	// Current joypad state
 	//0xFF81,	// Changed joypad bits
 
@@ -68,13 +70,14 @@ uint16_t memoryBreakpoints[] =
 };
 
 bool paused = false;
-bool breakpointsEnabled = true;
+bool breakpointsEnabled = false;
 
-uint8_t* romBuffer;
 uint8_t* memoryBuffer;
 
 uint16_t videoBufferSize;
 uint8_t* videoBuffer;
+
+CartridgeLoader cartridgeLoader;
 
 Memory* memory;
 CPU* cpu;
@@ -139,10 +142,20 @@ void VBlankCallback()
 {
 	//DrawFrameBuffer();
 	
+	// Update audio output
 	HRESULT result = audioOutput->Update();
 
 	if (result != S_OK)
 		Debug::Print("[WinBoy]: Error updating audio output: 0x%04x\n", result);
+
+	// Check if we need to save the cram
+	if (memory->mbc != NULL && memory->mbc->IsRamDirty())
+	{
+		if (cartridgeLoader.SaveCRam(memory->mbc->ram.Size()))
+			memory->mbc->ClearRamDirty();
+		else
+			Debug::Print("[WinBoy]: Failed to save CRAM.\n");
+	}
 }
 
 void DrawFrameBuffer()
@@ -176,32 +189,17 @@ void PauseEmulator()
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	romBuffer = new uint8_t[GB_MAX_CARTRIDGE_SIZE];
-
 	videoBufferSize = GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT / 4;
 	videoBuffer = new uint8_t[videoBufferSize];
 
-	memset(romBuffer, 0, GB_MAX_CARTRIDGE_SIZE);
 	memset(videoBuffer, 0, videoBufferSize);
-
-	FILE* handle;
-	errno_t error = fopen_s(&handle, ROM_FILE, "rb");
-
-	if (error != 0)
-	{
-		Debug::Print("[WinBoy]: Failed to read ROM file: %s!\n", ROM_FILE);
-		return 1;
-	}
-
-	size_t romSize = fread(romBuffer, 1, GB_MAX_CARTRIDGE_SIZE, handle);
-
-	fclose(handle);
-
-	Debug::Print("[WinBoy]: Rom file read with %u bytes.\n", romSize);
+	
+	if (!cartridgeLoader.LoadFile(ROM_FILE))
+		Debug::Halt();
 
 	memory = new Memory();
 	cpu = new CPU(*memory);
-	cartridge = new Cartridge(romBuffer);
+	cartridge = new Cartridge(cartridgeLoader.RomBuffer(), cartridgeLoader.CRamBuffer());
 	video = new Video(*cpu, *memory, videoBuffer);
 	audio = new Audio(*memory);
 	input = new Input(*cpu);
@@ -442,7 +440,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	audioOutput->Finalize();
 
-	delete[] romBuffer;
 	delete[] memoryBuffer;
 
 	return 0;

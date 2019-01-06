@@ -48,7 +48,6 @@ namespace libdmg
 		private:
 			MBC& mbc;
 
-			uint8_t* buffer;
 			uint32_t size;
 
 		public:
@@ -63,7 +62,7 @@ namespace libdmg
 
 		private:
 			uint8_t* GetCurrentBank() { return const_cast<uint8_t*>(static_cast<const RAM*>(this)->GetCurrentBank()); }
-			const uint8_t* GetCurrentBank() const { return buffer + (mbc.selectedRAMBank << 10); }
+			const uint8_t* GetCurrentBank() const { return mbc.cartridge.ram + (mbc.selectedRAMBank << 10); }
 		};
 
 	private:
@@ -73,6 +72,8 @@ namespace libdmg
 		bool ramEnabled;
 		bool ramBankMode;
 
+		bool ramDirty;
+
 		uint16_t selectedROMBank;
 
 		uint8_t selectedRAMBank;
@@ -80,6 +81,9 @@ namespace libdmg
 	public:
 		ROM rom;
 		RAM ram;
+
+		bool IsRamDirty() const { return ramDirty; }
+		void ClearRamDirty() { ramDirty = false; }
 
 	public:
 		MBC(Type type, Cartridge& cartridge);

@@ -7,6 +7,7 @@
 
 #include "cpu.h"
 #include "memory.h"
+#include "mbc.h"
 #include "cartridge.h"
 #include "video.h"
 #include "audio.h"

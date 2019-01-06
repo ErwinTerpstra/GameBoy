@@ -35,7 +35,7 @@ void Emulator::Boot()
 		instructionCount[opcode] = 0;
 
 	// Map cartridge rom and ram to memory
-	memory.BindCatridge(cartridge);
+	memory.BindCartridge(cartridge);
 
 	// Reset IO subsystems
 	cpu.Reset();

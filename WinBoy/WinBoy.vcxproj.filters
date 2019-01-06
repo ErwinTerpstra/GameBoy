@@ -26,6 +26,7 @@
       <Filter>Window</Filter>
     </ClInclude>
     <ClInclude Include="audiooutput.h" />
+    <ClInclude Include="cartridgeloader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinBoy.cpp" />
@@ -47,6 +48,7 @@
       <Filter>Window</Filter>
     </ClCompile>
     <ClCompile Include="audiooutput.cpp" />
+    <ClCompile Include="cartridgeloader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Window">

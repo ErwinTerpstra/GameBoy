@@ -9,6 +9,7 @@
 namespace libdmg
 {
 	class Cartridge;
+	class MBC;
 
 	class Memory
 	{
@@ -24,9 +25,12 @@ namespace libdmg
 		void (*MemoryWriteCallback)(uint16_t address);
 		void (*MemoryReadCallback)(uint16_t address);
 
+		MBC* mbc;
+
 	private:
 		
 		MemoryRange* banks;
+
 
 	public:
 
@@ -34,7 +38,7 @@ namespace libdmg
 		~Memory();
 
 		void BindIO(MemoryBank* input, MemoryBank* sound1, MemoryBank* sound2);
-		void BindCatridge(Cartridge& cartridge);
+		void BindCartridge(Cartridge& cartridge);
 
 		MemoryPointer RetrievePointer(uint16_t address)
 		{
