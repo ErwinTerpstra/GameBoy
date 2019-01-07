@@ -176,7 +176,7 @@ void ToneGenerator::StepVolumeEnvelope()
 
 uint8_t ToneGenerator::GetOutput() const
 {
-	return WAVEFORMS[wavePatternIndex];
+	return READ_BIT(WAVEFORMS[wavePatternDuty], wavePatternIndex);
 }
 
 uint8_t ToneGenerator::GetVolume() const

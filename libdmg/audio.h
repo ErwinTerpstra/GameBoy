@@ -21,8 +21,8 @@ namespace libdmg
 		uint64_t ticks;
 		uint32_t frameSequencerTicks;
 		
-		uint32_t sampleTimer;
-		uint32_t samplePeriod;
+		float sampleTimer;
+		float samplePeriod;
 
 		ToneGenerator sound1, sound2;
 

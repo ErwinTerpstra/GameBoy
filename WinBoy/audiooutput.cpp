@@ -58,17 +58,19 @@ HRESULT AudioOutput::Initialize()
 	waveFormat->wFormatTag = WAVE_FORMAT_PCM;
 	waveFormat->cbSize = sizeof(WAVEFORMATEX);
 	waveFormat->nChannels = 2;
-	waveFormat->nSamplesPerSec = 32768;
+	waveFormat->nSamplesPerSec = 44100;
 	waveFormat->wBitsPerSample = 16;
 
 	waveFormat->nBlockAlign = waveFormat->wBitsPerSample / 8 * waveFormat->nChannels;
 	waveFormat->nAvgBytesPerSec = waveFormat->wBitsPerSample / 8 * waveFormat->nChannels * waveFormat->nSamplesPerSec;
 
+	REFERENCE_TIME bufferDuration = 500 * 1000 * 10;
+
 #ifdef USE_EXCLUSIVE_MODE
 	hr = audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, waveFormat, NULL);
 	EXIT_ON_ERROR(hr);
 
-	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, 0, 1024 * 1000 * 10, 0, waveFormat, NULL);
+	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, 0, bufferDuration, bufferDuration, waveFormat, NULL);
 	EXIT_ON_ERROR(hr);
 #else
 	WAVEFORMATEX* fallbackFormat = NULL;
@@ -80,6 +82,8 @@ HRESULT AudioOutput::Initialize()
 	{
 		CoTaskMemFree(waveFormat);
 		waveFormat = fallbackFormat;
+
+		assert(waveFormat->nChannels == 2);
 	}
 
 	if (waveFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
@@ -88,7 +92,7 @@ HRESULT AudioOutput::Initialize()
 		Debug::Print("[AudioOutput]: Using extended wave format\n");
 	}
 
-	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, 1024 * 1000 * 10, 0, waveFormat, NULL);
+	hr = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, bufferDuration, 0, waveFormat, NULL);
 	EXIT_ON_ERROR(hr);
 #endif
 
@@ -167,14 +171,12 @@ HRESULT AudioOutput::LoadData(UINT32 numFrames, BYTE* data, DWORD* flags)
 
 	while (outputBuffer.Length() >= 2 && numFrames > 0)
 	{
-		for (uint32_t channel = 0; channel < waveFormat->nChannels; ++channel)
+		for (uint32_t channel = 0; channel < 2; ++channel)
 		{
-			if (channel < 2)
-			{
-				float sample = ((((float) outputBuffer.ReadByte()) / 255) - 0.5f) * 2.0f;
-				WriteSample(sample, waveFormat->wBitsPerSample, data);
-			}
+			float sample = outputBuffer.ReadByte() / 255.0f;
+			sample = (sample - 0.5f) * 2.0f;
 
+			WriteSample(sample, waveFormat->wBitsPerSample, data);
 			data += bytesPerSample;
 		}
 

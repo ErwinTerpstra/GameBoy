@@ -10,7 +10,7 @@ using namespace libdmg;
 Audio::Audio(Memory& memory) : memory(memory),
 	outputBuffer(BUFFER_SIZE),
 	sound1(true), sound2(false),
-	samplePeriod(128), sampleTimer(128),
+	samplePeriod(128), sampleTimer(0.0f),
 	ticks(0), frameSequencerTicks(0)
 {
 
@@ -30,7 +30,7 @@ void Audio::Sync(const uint64_t& targetTicks)
 
 void Audio::SetOutputFrequency(uint32_t frequency)
 {
-	samplePeriod = GB_CLOCK_FREQUENCY / frequency;
+	samplePeriod = GB_CLOCK_FREQUENCY / (float) frequency;
 }
 
 uint32_t Audio::GetOutputFrequency() const 
@@ -45,12 +45,12 @@ void Audio::Step()
 
 	sound1.StepFrequency();
 	sound2.StepFrequency();
-
-	--sampleTimer;
-	if (sampleTimer == 0)
+	
+	++sampleTimer;
+	if (sampleTimer > samplePeriod)
 	{
 		SampleOutput();
-		sampleTimer = samplePeriod;
+		sampleTimer -= samplePeriod;
 	}
 
 	++ticks;

@@ -6,6 +6,7 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 #include <audiopolicy.h>
+#include <AudioSessionTypes.h>
 
 //#define USE_EXCLUSIVE_MODE
 
