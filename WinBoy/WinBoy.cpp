@@ -18,6 +18,7 @@
 //#define ROM_FILE "../roms/Tetris (World).gb"
 //#define ROM_FILE "../roms/SuperMarioLand.gb"
 #define ROM_FILE "../roms/Pokemon Blue.gb"
+#define ROM_FILE "../roms/lsdj6_8_2_demo.gb"
 
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
@@ -33,6 +34,7 @@
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/11-op a,(hl).gb"
 //#define ROM_FILE "../roms/tests/instr_timing/instr_timing.gb"
 //#define ROM_FILE "../roms/tests/interrupt_time/interrupt_time.gb"
+//#define ROM_FILE "../roms/tests/dmg_sound/dmg_sound.gb"
 
 #define DISASSEMBLY_LENGTH 10
 #define SCALE_FACTOR 2
