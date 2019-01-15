@@ -18,7 +18,7 @@
 //#define ROM_FILE "../roms/Tetris (World).gb"
 //#define ROM_FILE "../roms/SuperMarioLand.gb"
 #define ROM_FILE "../roms/Pokemon Blue.gb"
-#define ROM_FILE "../roms/lsdj6_8_2_demo.gb"
+//#define ROM_FILE "../roms/lsdj6_8_2_demo.gb"
 
 //#define ROM_FILE "../roms/tests/cpu_instrs/cpu_instrs.gb"
 //#define ROM_FILE "../roms/tests/cpu_instrs/individual/01-special.gb"
@@ -142,7 +142,21 @@ void MemoryWriteCallback(uint16_t address)
 
 void VBlankCallback()
 {
-	//DrawFrameBuffer();
+	DrawFrameBuffer();
+	
+	window->ProcessMessages();
+
+	// Update input
+	InputManager& inputManager = InputManager::Instance();
+	input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('Z'));
+	input->SetButtonState(Input::BUTTON_B, inputManager.GetKey('X'));
+	input->SetButtonState(Input::BUTTON_START, inputManager.GetKey(VK_RETURN));
+	input->SetButtonState(Input::BUTTON_SELECT, inputManager.GetKey(VK_BACK));
+
+	input->SetButtonState(Input::BUTTON_DPAD_DOWN, inputManager.GetKey(VK_DOWN));
+	input->SetButtonState(Input::BUTTON_DPAD_LEFT, inputManager.GetKey(VK_LEFT));
+	input->SetButtonState(Input::BUTTON_DPAD_RIGHT, inputManager.GetKey(VK_RIGHT));
+	input->SetButtonState(Input::BUTTON_DPAD_UP, inputManager.GetKey(VK_UP));
 	
 	// Update audio output
 	HRESULT result = audioOutput->Update();
@@ -244,9 +258,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	double realTime = 0.0;
 	double timeScale = 1.0;
-
+	
 	while (true)
 	{
+		// Free-wheeling mode
+		if (inputManager.GetKey('F'))
+		{
+			// Record start 
+			LARGE_INTEGER startTicks;
+			QueryPerformanceCounter(&startTicks);
+
+			uint64_t startEmulatorTicks = emulator->Ticks();
+
+			// Core loop to update emulator
+			while (inputManager.GetKey('F'))
+				emulator->Tick();
+
+			LARGE_INTEGER endTicks;
+			QueryPerformanceCounter(&endTicks);
+
+			uint64_t endEmulatorTicks = emulator->Ticks();
+
+			double emulatorDuration = (endEmulatorTicks - startEmulatorTicks) / (double) GB_CLOCK_FREQUENCY;
+			double realDuration = (endTicks.QuadPart - startTicks.QuadPart) * secondsPerTick;
+
+			printf("[WinBoy]: Freewheeling performance: %.1f%%\n", (emulatorDuration / realDuration) * 100);
+			
+			realTime = endEmulatorTicks / (double)GB_CLOCK_FREQUENCY;
+			previousFrameTicks = endTicks;
+		}
+
 		if (inputManager.GetKeyDown('B'))
 		{
 			paused = true;
@@ -283,7 +324,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-		timeScale = inputManager.GetKey('P') ? 4.0 : 1.0;
+		if (inputManager.GetKey('P'))
+			timeScale = 8.0;
+		else
+			timeScale = 1.0;
 
 		if (paused)
 		{
@@ -327,7 +371,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					startAddress = GB_BG_MAP_1;
 					endAddress = GB_BG_MAP_1 + 0x3FF;
 				}
-				
+
 				if (startAddress != 0)
 				{
 					for (uint16_t address = startAddress; address <= endAddress; ++address)
@@ -380,14 +424,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			QueryPerformanceCounter(&currentTicks);
 			realTime += (currentTicks.QuadPart - previousFrameTicks.QuadPart) * secondsPerTick * timeScale;
 			previousFrameTicks = currentTicks;
-			
-			do
+
+			emulatorTime = emulator->Ticks() / (double)GB_CLOCK_FREQUENCY;
+
+			while (emulatorTime < realTime && !paused)
 			{
 				uint64_t cpuTicks = cpu->Ticks();
 				emulator->Tick();
-				
+
 				// Calculate the time since boot for the CPU
-				emulatorTime = emulator->Ticks() / (double) GB_CLOCK_FREQUENCY;
+				emulatorTime = emulator->Ticks() / (double)GB_CLOCK_FREQUENCY;
 
 				double delta = realTime - emulatorTime;
 				if (delta > MAX_CATCHUP_TIME)
@@ -396,7 +442,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					printf("[WinBoy]: Warning! Emulator was %.2fs behind. Skipping to catch up...\n", delta);
 				}
 
-				if (cpu->Ticks() != cpuTicks && breakpointsEnabled)
+				// Only test for breakpoints if the CPU executed a new instruction, for some instructions this can be once in 16 ticks.
+				if (breakpointsEnabled && cpu->Ticks() != cpuTicks)
 				{
 					// Test for PC breakpoints
 					const CPU::Registers& registers = cpu->GetRegisters();
@@ -421,23 +468,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						}
 					}
 				}
-			} while (emulatorTime < realTime && !paused);
+			}
 		}
-
-		DrawFrameBuffer();
-		window->ProcessMessages();
-
-		input->SetButtonState(Input::BUTTON_A, inputManager.GetKey('Z'));
-		input->SetButtonState(Input::BUTTON_B, inputManager.GetKey('X'));
-		input->SetButtonState(Input::BUTTON_START, inputManager.GetKey(VK_RETURN));
-		input->SetButtonState(Input::BUTTON_SELECT, inputManager.GetKey(VK_BACK));
-
-		input->SetButtonState(Input::BUTTON_DPAD_DOWN, inputManager.GetKey(VK_DOWN));
-		input->SetButtonState(Input::BUTTON_DPAD_LEFT, inputManager.GetKey(VK_LEFT));
-		input->SetButtonState(Input::BUTTON_DPAD_RIGHT, inputManager.GetKey(VK_RIGHT));
-		input->SetButtonState(Input::BUTTON_DPAD_UP, inputManager.GetKey(VK_UP));
-
-		Sleep(0);
 	}
 
 	audioOutput->Finalize();
